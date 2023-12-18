@@ -36,6 +36,7 @@ dependencies {
 }
 
 intellij {
+    plugins = ['com.intellij.java']
     version.set("221-EAP-SNAPSHOT")
 
     //plugins.set(['psiviewer:221-SNAPSHOT']) // For debugging the parser only

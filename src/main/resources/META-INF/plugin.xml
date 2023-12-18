@@ -34,6 +34,7 @@
     <codeStyleSettingsProvider implementation="com.javampire.openscad.formatter.OpenSCADCodeStyleSettingsProvider" />
     <langCodeStyleSettingsProvider implementation="com.javampire.openscad.formatter.OpenSCADLanguageCodeStyleSettingsProvider" />
     <completion.contributor language="OpenSCAD" implementationClass="com.javampire.openscad.completion.OpenSCADCompletionContributor" />
+    <psi.referenceContributor implementation="com.javampire.openscad.references.OpenSCADReferenceContributor"/>
   </extensions>
 
   <actions>
@@ -50,5 +51,6 @@
 
   <depends>com.intellij.modules.platform</depends>
   <depends>com.intellij.modules.lang</depends>
+  <depends>com.intellij.modules.java</depends>
 
 </idea-plugin>
