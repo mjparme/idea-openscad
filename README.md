@@ -3,6 +3,7 @@
 [![JetBrains Plugin Rating](https://img.shields.io/jetbrains/plugin/r/rating/11198-openscad-language-support)](https://plugins.jetbrains.com/plugin/11198-openscad-language-support/reviews)
 [![JetBrains Plugin Downloads](https://img.shields.io/jetbrains/plugin/d/11198-openscad-language-support)](https://plugins.jetbrains.com/plugin/11198-openscad-language-support)
 
+<!-- Plugin description -->
 # OpenSCAD Language Support for IntelliJ Platform
 
 [OpenSCAD](https://openscad.org/index.html) language plugin for IntelliJ Platform IDEs (Idea, PyCharm, etc). It provides :
@@ -18,6 +19,7 @@
 * Color picking
 * Actions for opening OpenSCAD and exporting model
 * Color scheme close to the built-in OpenSCAD editor
+<!-- Plugin description end -->
 
 ## Configuration
 
