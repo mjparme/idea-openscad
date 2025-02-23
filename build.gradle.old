@@ -1,7 +1,8 @@
 plugins {
-    id 'org.jetbrains.intellij' version '1.17.4'
-    id 'org.jetbrains.changelog' version '2.2.0'
-    id 'com.github.ldenisey.setversions' version '1.0.4'
+    id "org.jetbrains.intellij.platform" version "2.2.1"
+    id "org.jetbrains.intellij.platform.migration" version "2.2.1"
+    id "org.jetbrains.changelog" version "2.2.0"
+    id "com.github.ldenisey.setversions" version "1.0.4"
     id "com.github.node-gradle.node" version "7.0.1"
 }
 
@@ -17,6 +18,12 @@ sourceSets.main.resources.srcDirs = ['src/main/resources', 'src/main/generated-r
 
 repositories {
     mavenCentral()
+
+    //IntelliJ Platform Gradle Plugin Repositories Extension -
+    //read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-repositories-extension.html
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
 dependencies {
@@ -28,7 +35,80 @@ clean {
     delete "./src/main/generated-resources"
 }
 
-intellij {
+intellijPlatform {
+    buildSearchableOptions = true
+    instrumentCode = true
+    projectName = project.name
+
+    pluginConfiguration {
+        id = "com.javampire.idea-openscad"
+        name = "OpenSCAD Language Support"
+        version = project.version
+        description = """
+          <p><a href="https://openscad.org/index.html">OpenSCAD</a> language plugin for IntelliJ Platform IDEs (Idea, PyCharm, etc.). It provides :</p>
+          <ul>
+              <li>Preview split panel</li>
+              <li>Syntax highlighting</li>
+              <li>Code completion</li>
+              <li>Code navigation</li>
+              <li>Formatting</li>
+              <li>Code folding support</li>
+              <li>Structure views</li>
+              <li>Library support</li>
+              <li>Color picking</li>
+              <li>Actions for opening OpenSCAD and exporting model</li>
+              <li>Color scheme close to the built-in OpenSCAD editor</li>
+          </ul>
+"""
+        ideaVersion {
+            sinceBuild = '232'
+            untilBuild = provider { null }
+        }
+
+        vendor {
+            name = 'Michael Parmeley'
+            email = 'mjparme@gmail.com'
+            url = 'https://github.com/mjparme/idea-openscad'
+        }
+    }
+
+    publishing {
+        //TODO: figure out publishing
+    }
+
+    signing {
+        //TODO: figure out signing
+    }
+
+    pluginVerification {
+        ides {
+            recommended()
+        }
+    }
+}
+
+intellijPlatformTesting {
+    runIde {
+        register("runIdeForUiTests") {
+            task {
+                jvmArgumentProviders += CommandLineArgumentProvider {
+                    listOf(
+                            "-Drobot-server.port=8082",
+                            "-Dide.mac.message.dialogs.as.sheets=false",
+                            "-Djb.privacy.policy.text=<!--999.999-->",
+                            "-Djb.consents.confirmation.enabled=false",
+                    )
+                }
+            }
+
+            plugins {
+                robotServerPlugin()
+            }
+        }
+    }
+}
+
+/*intellij {
     //version.set("2021.2.1")
     //version.set("2022.3.1")
     version.set("2023.2.1")
@@ -72,7 +152,7 @@ intellij {
 
     // For parser debugging only
     //plugins.add('psiviewer:232.2')
-}
+}*/
 
 runPluginVerifier {
     if (project.findProperty("runPluginVerifier.ideVersions")) {
