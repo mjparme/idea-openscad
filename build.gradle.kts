@@ -19,6 +19,17 @@ kotlin {
     jvmToolchain(17)
 }
 
+sourceSets {
+    main {
+        java.srcDirs("src/main/java", "src/main/gen")
+        resources.srcDirs("src/main/resources", "src/main/generated-resources")
+    }
+}
+
+tasks.processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE  // Options: INCLUDE, EXCLUDE, WARN, FAIL
+}
+
 // Configure project's dependencies
 repositories {
     mavenCentral()
