@@ -66,11 +66,11 @@ public class OpenSCADPsiImplUtil {
         };
     }
 
-    public static PsiElement setName(@NotNull final PsiElement element, final String newName) {
+    public static PsiElement setName(@NotNull final PsiElement element, @NotNull final String newName) {
         if (OpenSCADParserTokenSets.NON_RENAMABLE_ELEMENTS.contains(element.getNode().getElementType())) {
             throw new IncorrectOperationException("Builtin functions/modules can't be renamed");
         }
-        return element;
+        return OpenSCADNamedElementImpl.setName(element, newName);
     }
 
     public static PsiElement getNameIdentifier(@NotNull PsiElement element) {
@@ -195,13 +195,23 @@ public class OpenSCADPsiImplUtil {
         // Loop from first sibling to element (variables declared after elements are not accessible)
         if (parent != null) {
             for (PsiElement sibling = parent.getFirstChild(); sibling != null && sibling != element; sibling = sibling.getNextSibling()) {
-                if (sibling.getNode().getElementType() == OpenSCADVariableStubElementType.INSTANCE) {
-                    variableDeclarationsInParent.add((OpenSCADVariableDeclaration) sibling);
-                }
+                collectVariableDeclarations(sibling, variableDeclarationsInParent);
             }
         }
 
         return variableDeclarationsInParent;
+    }
+
+    private static void collectVariableDeclarations(@NotNull PsiElement element,
+                                                    @NotNull List<OpenSCADVariableDeclaration> result) {
+        if (element.getNode().getElementType() == OpenSCADVariableStubElementType.INSTANCE) {
+            result.add((OpenSCADVariableDeclaration) element);
+        } else {
+            final OpenSCADVariableDeclaration declaration = PsiTreeUtil.getChildOfType(element, OpenSCADVariableDeclaration.class);
+            if (declaration != null) {
+                result.add(declaration);
+            }
+        }
     }
 
     /**

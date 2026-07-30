@@ -1,5 +1,6 @@
 package com.javampire.openscad.psi;
 
+import com.intellij.lang.ASTNode;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFileFactory;
@@ -13,7 +14,15 @@ public class OpenSCADElementFactory {
 
     public static PsiElement createIdentifier(final Project project, final String name) {
         final OpenSCADFile file = createFile(project, name + "=0;");
-        return file.getFirstChild();
+        final ASTNode variableDeclaration = file.getNode().getFirstChildNode();
+        if (variableDeclaration == null) {
+            throw new IllegalStateException("Failed to create identifier for: " + name);
+        }
+        final ASTNode identifier = variableDeclaration.findChildByType(OpenSCADTypes.IDENTIFIER);
+        if (identifier == null) {
+            throw new IllegalStateException("Failed to create identifier for: " + name);
+        }
+        return identifier.getPsi();
     }
 
     public static OpenSCADFile createFile(final Project project, final String text) {

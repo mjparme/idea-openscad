@@ -48,6 +48,11 @@
         <lang.psiStructureViewFactory language="OpenSCAD" implementationClass="com.javampire.openscad.structureview.OpenSCADStructureViewFactory"/>
         <lang.commenter language="OpenSCAD" implementationClass="com.javampire.openscad.editor.OpenSCADCommenter"/>
         <lang.documentationProvider language="OpenSCAD" implementationClass="com.javampire.openscad.documentation.OpenSCADDocumentationProvider"/>
+        <lang.refactoringSupport language="OpenSCAD" implementationClass="com.javampire.openscad.refactoring.OpenSCADRefactoringSupportProvider"/>
+        <lang.renameProcessor language="OpenSCAD" implementationClass="com.javampire.openscad.refactoring.OpenSCADRenameProcessor"/>
+        <lang.findUsagesProvider language="OpenSCAD" implementationClass="com.javampire.openscad.refactoring.OpenSCADFindUsagesProvider"/>
+        <lang.elementManipulator forClass="com.intellij.psi.PsiNameIdentifierOwner"
+                                 implementationClass="com.javampire.openscad.refactoring.OpenSCADNamedElementManipulator"/>
     </extensions>
 
     <actions>
