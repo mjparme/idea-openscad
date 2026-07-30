@@ -2,7 +2,8 @@ package com.javampire.openscad.settings;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.javampire.openscad.action.OpenSCADExecutor;
-import org.apache.commons.collections.map.LinkedMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,7 +14,7 @@ import java.util.Set;
 public class OpenSCADInfo {
     private static final Logger LOG = Logger.getInstance(OpenSCADInfo.class);
     private static String infoString = null;
-    private static LinkedMap infoMap = null;
+    private static Map<String, String> infoMap = null;
 
     private OpenSCADInfo() {
     }
@@ -44,9 +45,9 @@ public class OpenSCADInfo {
         infoMap = null;
     }
 
-    private static LinkedMap getInfoMap() {
+    private static Map<String, String> getInfoMap() {
         if (infoMap == null) {
-            infoMap = new LinkedMap();
+            infoMap = new LinkedHashMap<>();
             parseInfoString();
         }
         return infoMap;
@@ -81,10 +82,15 @@ public class OpenSCADInfo {
                 // Most probably caused by string property that contains a return char
                 if (key == null) {
                     // Appending to the value of the last inserted key
-                    final String lastKey = (String) infoMap.lastKey();
-                    final String lastValue = infoMap.get(lastKey) + "\n" + line.trim();
-                    infoMap.remove(lastKey);
-                    infoMap.put(lastKey, lastValue);
+                    String lastKey = null;
+                    for (String mapKey : infoMap.keySet()) {
+                        lastKey = mapKey;
+                    }
+                    if (lastKey != null) {
+                        final String lastValue = infoMap.get(lastKey) + "\n" + line.trim();
+                        infoMap.remove(lastKey);
+                        infoMap.put(lastKey, lastValue);
+                    }
                 } else {
                     value.append(line.trim()).append("\n");
                 }

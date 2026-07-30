@@ -6,10 +6,13 @@ import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.ColorPicker;
+import com.intellij.ui.awt.RelativePoint;
 import com.javampire.openscad.OpenSCADIcons;
 import com.javampire.openscad.editor.OpenSCADPreviewFileEditor;
 import com.javampire.openscad.editor.OpenSCADPreviewFileEditorConfiguration;
 import org.jetbrains.annotations.NotNull;
+
+import java.awt.MouseInfo;
 
 
 /**
@@ -44,7 +47,9 @@ public class SetModelColorAction extends OpenSCADAction {
             ColorPicker.showColorPickerPopup(
                     event.getProject(),
                     editorConfig.getModelColor(),
-                    (color, source) -> editorConfig.updateModelColor(color)
+                    (color, source) -> editorConfig.updateModelColor(color),
+                    new RelativePoint(MouseInfo.getPointerInfo().getLocation()),
+                    true
             );
         }
     }
