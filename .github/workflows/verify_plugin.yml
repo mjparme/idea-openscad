@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: 17
+          java-version: 25
       - uses: actions/checkout@v4
 
       # Build artifact using buildPlugin Gradle task
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: 17
+          java-version: 25
       - uses: actions/checkout@v4
       
       # Export IDE versions list
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: 17
+          java-version: 25
       - uses: actions/checkout@v4
 
       # Cache Gradle Dependencies
