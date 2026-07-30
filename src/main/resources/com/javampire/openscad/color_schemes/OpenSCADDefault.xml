@@ -23,6 +23,16 @@
         <option name="FOREGROUND" value="28100" />
       </value>
     </option>
+    <option name="OPENSCAD_MODULE_NAME">
+      <value>
+        <option name="FOREGROUND" value="881798" />
+      </value>
+    </option>
+    <option name="OPENSCAD_FUNCTION_NAME">
+      <value>
+        <option name="FOREGROUND" value="660e7a" />
+      </value>
+    </option>
     <option name="OPENSCAD_NUMBER">
       <value>
         <option name="FOREGROUND" value="a05400" />
