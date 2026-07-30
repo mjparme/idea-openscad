@@ -6,7 +6,6 @@ import com.intellij.openapi.options.colors.AttributesDescriptor;
 import com.intellij.openapi.options.colors.ColorDescriptor;
 import com.intellij.openapi.options.colors.ColorSettingsPage;
 import com.javampire.openscad.OpenSCADIcons;
-import com.javampire.openscad.formatter.OpenSCADLanguageCodeStyleSettingsProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,6 +17,9 @@ public class OpenSCADColorSettingsPage implements ColorSettingsPage {
             new AttributesDescriptor("Include", OpenSCADSyntaxHighlighter.IMPORT),
             new AttributesDescriptor("Include path", OpenSCADSyntaxHighlighter.IMPORT_PATH),
             new AttributesDescriptor("Identifier", OpenSCADSyntaxHighlighter.IDENTIFIER),
+            new AttributesDescriptor("Module name", OpenSCADSyntaxHighlighter.MODULE_NAME),
+            new AttributesDescriptor("Function name", OpenSCADSyntaxHighlighter.FUNCTION_NAME),
+            new AttributesDescriptor("Variable name", OpenSCADSyntaxHighlighter.VARIABLE_NAME),
             new AttributesDescriptor("Keyword", OpenSCADSyntaxHighlighter.KEYWORD),
             new AttributesDescriptor("Builtin geometric operator", OpenSCADSyntaxHighlighter.OPERATOR_KEYWORD),
             new AttributesDescriptor("Builtin object primitive", OpenSCADSyntaxHighlighter.OBJECT_KEYWORD),
@@ -48,13 +50,20 @@ public class OpenSCADColorSettingsPage implements ColorSettingsPage {
     @NotNull
     @Override
     public String getDemoText() {
-        return OpenSCADLanguageCodeStyleSettingsProvider.CONF_EXAMPLE;
+        return "<variable>myVar</variable> = 10;\n"
+                + "module <module>myMod</module>() {}\n"
+                + "<module>myMod</module>();\n"
+                + "function <function>myFunc</function>(x) = <variable>myVar</variable> + x;\n";
     }
 
     @Nullable
     @Override
     public Map<String, TextAttributesKey> getAdditionalHighlightingTagToDescriptorMap() {
-        return null;
+        return Map.of(
+                "module", OpenSCADSyntaxHighlighter.MODULE_NAME,
+                "function", OpenSCADSyntaxHighlighter.FUNCTION_NAME,
+                "variable", OpenSCADSyntaxHighlighter.VARIABLE_NAME
+        );
     }
 
     @NotNull

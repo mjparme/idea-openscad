@@ -36,6 +36,7 @@
 
         <fileEditorProvider implementation="com.javampire.openscad.editor.OpenSCADTextEditorWithPreviewProvider"/>
         <lang.syntaxHighlighterFactory language="OpenSCAD" implementationClass="com.javampire.openscad.highlighting.OpenSCADSyntaxHighlighterFactory"/>
+        <annotator language="OpenSCAD" implementationClass="com.javampire.openscad.highlighting.OpenSCADAnnotator"/>
         <codeStyleSettingsProvider implementation="com.javampire.openscad.formatter.OpenSCADCodeStyleSettingsProvider"/>
         <langCodeStyleSettingsProvider implementation="com.javampire.openscad.formatter.OpenSCADLanguageCodeStyleSettingsProvider"/>
         <colorSettingsPage implementation="com.javampire.openscad.highlighting.OpenSCADColorSettingsPage"/>
