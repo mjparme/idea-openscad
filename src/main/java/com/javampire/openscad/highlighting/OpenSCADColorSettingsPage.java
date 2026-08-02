@@ -20,6 +20,7 @@ public class OpenSCADColorSettingsPage implements ColorSettingsPage {
             new AttributesDescriptor("Module name", OpenSCADSyntaxHighlighter.MODULE_NAME),
             new AttributesDescriptor("Function name", OpenSCADSyntaxHighlighter.FUNCTION_NAME),
             new AttributesDescriptor("Variable name", OpenSCADSyntaxHighlighter.VARIABLE_NAME),
+            new AttributesDescriptor("Parameter name", OpenSCADSyntaxHighlighter.PARAMETER_NAME),
             new AttributesDescriptor("Keyword", OpenSCADSyntaxHighlighter.KEYWORD),
             new AttributesDescriptor("Builtin geometric operator", OpenSCADSyntaxHighlighter.OPERATOR_KEYWORD),
             new AttributesDescriptor("Builtin object primitive", OpenSCADSyntaxHighlighter.OBJECT_KEYWORD),
@@ -51,9 +52,9 @@ public class OpenSCADColorSettingsPage implements ColorSettingsPage {
     @Override
     public String getDemoText() {
         return "<variable>myVar</variable> = 10;\n"
-                + "module <module>myMod</module>() {}\n"
-                + "<module>myMod</module>();\n"
-                + "function <function>myFunc</function>(x) = <variable>myVar</variable> + x;\n";
+                + "module <module>myMod</module>(<parameter>size</parameter>) { cube(<parameter>size</parameter>); }\n"
+                + "<module>myMod</module>(10);\n"
+                + "function <function>myFunc</function>(<parameter>x</parameter>) = <variable>myVar</variable> + <parameter>x</parameter>;\n";
     }
 
     @Nullable
@@ -62,7 +63,8 @@ public class OpenSCADColorSettingsPage implements ColorSettingsPage {
         return Map.of(
                 "module", OpenSCADSyntaxHighlighter.MODULE_NAME,
                 "function", OpenSCADSyntaxHighlighter.FUNCTION_NAME,
-                "variable", OpenSCADSyntaxHighlighter.VARIABLE_NAME
+                "variable", OpenSCADSyntaxHighlighter.VARIABLE_NAME,
+                "parameter", OpenSCADSyntaxHighlighter.PARAMETER_NAME
         );
     }
 
