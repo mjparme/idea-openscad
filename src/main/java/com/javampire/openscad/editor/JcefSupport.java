@@ -1,6 +1,9 @@
 package com.javampire.openscad.editor;
 
+import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.application.ReadAction.CannotReadException;
 import com.intellij.openapi.diagnostic.Logger;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * JCEF availability check without a compile-time dependency on JBCefApp.
@@ -15,15 +18,40 @@ final class JcefSupport {
     }
 
     static boolean isSupported() {
-        Boolean cached = supported;
-        if (cached == null) {
-            cached = detectSupport();
-            supported = cached;
+        final Boolean cached = supported;
+        if (cached != null) {
+            return cached;
         }
-        return cached;
+        final Boolean detected = tryDetectSupport();
+        if (detected == null) {
+            return false;
+        }
+        supported = detected;
+        return detected;
     }
 
-    private static boolean detectSupport() {
+    /**
+     * @return definitive support result, or {@code null} when the check must be retried later
+     */
+    @Nullable
+    private static Boolean tryDetectSupport() {
+        try {
+            return ReadAction.compute(JcefSupport::detectSupportUnderReadLock);
+        }
+        catch (CannotReadException e) {
+            LOG.debug("JCEF support check deferred until read lock is available");
+            return null;
+        }
+        catch (RuntimeException e) {
+            if (e.getCause() instanceof CannotReadException) {
+                LOG.debug("JCEF support check deferred until read lock is available");
+                return null;
+            }
+            throw e;
+        }
+    }
+
+    private static boolean detectSupportUnderReadLock() {
         try {
             final Class<?> jcefApp = Class.forName(
                     "com.intellij.ui.jcef.JBCefApp",
@@ -36,8 +64,15 @@ final class JcefSupport {
             }
             return result;
         }
-        catch (Throwable t) {
-            LOG.warn("JCEF is not available for OpenSCAD preview", t);
+        catch (ClassNotFoundException e) {
+            LOG.warn("JCEF is not available for OpenSCAD preview: module not loaded", e);
+            return false;
+        }
+        catch (ReflectiveOperationException e) {
+            if (e.getCause() instanceof CannotReadException cannotReadException) {
+                throw cannotReadException;
+            }
+            LOG.warn("JCEF is not available for OpenSCAD preview", e);
             return false;
         }
     }
