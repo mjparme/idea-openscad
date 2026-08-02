@@ -16,6 +16,7 @@ public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettin
 
     private String openSCADExecutable = null;
     private boolean allowPreviewEditor = false;
+    private boolean fillNamedArgumentsOnModuleCompletion = false;
 
     public static OpenSCADSettings getInstance() {
         return ApplicationManager.getApplication().getService(OpenSCADSettings.class);
@@ -47,6 +48,14 @@ public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettin
 
     public void setAllowPreviewEditor(boolean allowPreviewEditor) {
         this.allowPreviewEditor = allowPreviewEditor;
+    }
+
+    public boolean isFillNamedArgumentsOnModuleCompletion() {
+        return fillNamedArgumentsOnModuleCompletion;
+    }
+
+    public void setFillNamedArgumentsOnModuleCompletion(final boolean fillNamedArgumentsOnModuleCompletion) {
+        this.fillNamedArgumentsOnModuleCompletion = fillNamedArgumentsOnModuleCompletion;
     }
 
     public boolean hasExecutable() {
