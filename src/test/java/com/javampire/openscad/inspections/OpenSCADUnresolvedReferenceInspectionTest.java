@@ -47,6 +47,22 @@ public class OpenSCADUnresolvedReferenceInspectionTest extends BasePlatformTestC
         assertFalse(hasErrorOn(myFixture.doHighlighting(), "cube"));
     }
 
+    public void testSpecialVariablePreviewIsNotMarked() {
+        myFixture.configureByText("test.scad", "$fn = $preview ? 12 : 72;");
+        final List<HighlightInfo> highlights = myFixture.doHighlighting();
+        assertFalse(hasErrorOn(highlights, "$preview"));
+        assertFalse(hasErrorOn(highlights, "$fn"));
+    }
+
+    public void testSpecialVariableChildrenIsNotMarked() {
+        myFixture.configureByText("test.scad", """
+                module test() {
+                    echo($children);
+                }
+                """);
+        assertFalse(hasErrorOn(myFixture.doHighlighting(), "$children"));
+    }
+
     public void testUnresolvedVariableInEcho() {
         myFixture.configureByText("test.scad", "echo(unknownEchoVar);");
         assertTrue(hasErrorOn(myFixture.doHighlighting(), "unknownEchoVar"));

@@ -44,9 +44,11 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     private static final String _FROM_ = " from ";
     private static final String BUILT_IN_MODULES_FILENAME = "/com/javampire/openscad/skeletons/builtin_modules.scad";
     private static final String BUILT_IN_FUNCTIONS_FILENAME = "/com/javampire/openscad/skeletons/builtin_functions.scad";
+    private static final String BUILT_IN_SPECIAL_VARIABLES_FILENAME = "/com/javampire/openscad/skeletons/builtin_special_variables.scad";
 
     private static List<LookupElement> builtinModules;
     private static List<LookupElement> builtinFunctions;
+    private static List<LookupElement> builtinSpecialVariables;
     private static List<LookupElement> globalLibrariesModulesAndFunctions;
 
     public OpenSCADCompletionContributor() {
@@ -113,6 +115,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                         // Add builtin modules and functions
                         addBuiltinModules(project, result);
                         addBuiltinFunctions(project, result);
+                        addBuiltinSpecialVariables(project, result);
                         ProgressManager.checkCanceled();
 
                         // Add declared library methods and functions
@@ -293,6 +296,24 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
             }
         }
         result.addAllElements(builtinFunctions);
+    }
+
+    private void addBuiltinSpecialVariables(@NotNull final Project project, @NotNull final CompletionResultSet result) {
+        if (builtinSpecialVariables == null) {
+            final PsiFile specialVariablesSkeleton = PsiManager.getInstance(project).findFile(
+                    VfsUtil.findFileByURL(getClass().getResource(BUILT_IN_SPECIAL_VARIABLES_FILENAME))
+            );
+            if (specialVariablesSkeleton == null) {
+                LOG.warn("Can not parse builtin special variables skeleton file, completion will not be available on special variables.");
+                builtinSpecialVariables = List.of();
+            } else {
+                builtinSpecialVariables = convertToLookupElements(
+                        PsiTreeUtil.getChildrenOfTypeAsList(specialVariablesSkeleton, OpenSCADVariableDeclaration.class),
+                        null
+                );
+            }
+        }
+        result.addAllElements(builtinSpecialVariables);
     }
 
     /**
