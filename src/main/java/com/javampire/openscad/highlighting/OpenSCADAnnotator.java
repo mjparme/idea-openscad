@@ -24,6 +24,8 @@ public class OpenSCADAnnotator implements Annotator {
             annotate(variableRef, resolvesToParameter(variableRef)
                     ? OpenSCADSyntaxHighlighter.PARAMETER_NAME
                     : OpenSCADSyntaxHighlighter.VARIABLE_NAME, holder);
+        } else if (element instanceof OpenSCADParameterReference parameterRef) {
+            annotate(parameterRef, OpenSCADSyntaxHighlighter.PARAMETER_NAME, holder);
         } else if (element instanceof OpenSCADVariableDeclaration) {
             annotate(element, OpenSCADSyntaxHighlighter.VARIABLE_NAME, holder);
         }

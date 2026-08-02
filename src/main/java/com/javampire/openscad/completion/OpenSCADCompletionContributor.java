@@ -1,15 +1,24 @@
 package com.javampire.openscad.completion;
 
-import com.intellij.codeInsight.completion.*;
+import static com.javampire.openscad.parser.OpenSCADParserTokenSets.FUNCTION_KEYWORDS;
+import static com.javampire.openscad.parser.OpenSCADParserTokenSets.WITH_FULL_ARG_DECLARATION_LIST;
+
+import com.intellij.codeInsight.completion.CompletionContributor;
+import com.intellij.codeInsight.completion.CompletionParameters;
+import com.intellij.codeInsight.completion.CompletionProvider;
+import com.intellij.codeInsight.completion.CompletionResultSet;
+import com.intellij.codeInsight.completion.CompletionType;
+import com.intellij.codeInsight.completion.InsertHandler;
+import com.intellij.codeInsight.completion.InsertionContext;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
-import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.Editor;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.keymap.KeymapUtil;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
@@ -29,7 +38,20 @@ import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.ProcessingContext;
 import com.javampire.openscad.OpenSCADFileType;
 import com.javampire.openscad.OpenSCADLanguage;
-import com.javampire.openscad.psi.*;
+import com.javampire.openscad.psi.OpenSCADArgAssignmentList;
+import com.javampire.openscad.psi.BuiltinSkeletons;
+import com.javampire.openscad.psi.OpenSCADArgDeclaration;
+import com.javampire.openscad.psi.OpenSCADArgDeclarationList;
+import com.javampire.openscad.psi.OpenSCADExpr;
+import com.javampire.openscad.psi.OpenSCADFullArgDeclaration;
+import com.javampire.openscad.psi.OpenSCADFullArgDeclarationList;
+import com.javampire.openscad.psi.OpenSCADFunctionDeclaration;
+import com.javampire.openscad.psi.OpenSCADIncludeImport;
+import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
+import com.javampire.openscad.psi.OpenSCADPsiImplUtil;
+import com.javampire.openscad.psi.OpenSCADTypes;
+import com.javampire.openscad.psi.OpenSCADUseImport;
+import com.javampire.openscad.psi.OpenSCADVariableDeclaration;
 import com.javampire.openscad.references.OpenSCADResolver;
 import com.javampire.openscad.settings.OpenSCADSettings;
 import org.jetbrains.annotations.NotNull;
@@ -40,8 +62,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static com.javampire.openscad.parser.OpenSCADParserTokenSets.*;
 
 public class OpenSCADCompletionContributor extends CompletionContributor {
     private static final Logger LOG = Logger.getInstance(OpenSCADCompletionContributor.class);
@@ -57,9 +77,26 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
             }
             return name + " = ";
         }
+
+        @NotNull
+        String toCallSiteAssignment(final int index, final boolean positionalFirstArgumentModule) {
+            if (positionalFirstArgumentModule && index == 0) {
+                if (defaultValueText != null && !defaultValueText.isEmpty()) {
+                    return defaultValueText;
+                }
+                return toCallSiteAssignment();
+            }
+            return toCallSiteAssignment();
+        }
+
+        int caretOffsetAfterAssignment(final int index, final boolean positionalFirstArgumentModule) {
+            return toCallSiteAssignment(index, positionalFirstArgumentModule).length();
+        }
     }
 
-    private record CachedModuleLookupObject(@NotNull List<ModuleParameterInfo> parameters, boolean fillNamedArguments) {
+    private record CachedModuleLookupObject(@NotNull String moduleName,
+                                            @NotNull List<ModuleParameterInfo> parameters,
+                                            boolean fillNamedArguments) {
     }
 
     private record CachedModuleInfo(@NotNull String name, @NotNull List<ModuleParameterInfo> parameters, @NotNull javax.swing.Icon icon) {
@@ -72,25 +109,33 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
             return;
         }
         if (lookupData.fillNamedArguments()) {
-            insertFilledNamedModuleCall(context, lookupData.parameters());
+            insertFilledModuleCall(context, lookupData.parameters(), lookupData.positionalFirstArgument());
         }
         else {
             insertParameterizedModuleCall(context);
         }
     };
 
-    private record ModuleLookupData(@NotNull List<ModuleParameterInfo> parameters, boolean fillNamedArguments) {
+    private record ModuleLookupData(@NotNull List<ModuleParameterInfo> parameters,
+                                    boolean fillNamedArguments,
+                                    boolean positionalFirstArgument) {
     }
 
     private static ModuleLookupData getModuleLookupData(@NotNull final LookupElement item) {
         final Object lookupObject = item.getObject();
         if (lookupObject instanceof ModuleLookupObject moduleLookup) {
-            return new ModuleLookupData(getModuleParameters(moduleLookup.module()), moduleLookup.fillNamedArguments());
+            return new ModuleLookupData(
+                    getModuleParameters(moduleLookup.module()),
+                    moduleLookup.fillNamedArguments(),
+                    false);
         }
         if (lookupObject instanceof CachedModuleLookupObject cachedLookup) {
-            return new ModuleLookupData(cachedLookup.parameters(), cachedLookup.fillNamedArguments());
+            return new ModuleLookupData(
+                    cachedLookup.parameters(),
+                    cachedLookup.fillNamedArguments(),
+                    BuiltinSkeletons.isPositionalFirstArgumentModule(cachedLookup.moduleName()));
         }
-        return new ModuleLookupData(List.of(), false);
+        return new ModuleLookupData(List.of(), false, false);
     }
 
     private static final String MODULE_WITH_ARGS_SUFFIX = " (with args)";
@@ -114,10 +159,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                 PlatformPatterns.psiElement().withLanguage(OpenSCADLanguage.INSTANCE),
                 new CompletionProvider<>() {
                     @Override
-                    protected void addCompletions(
-                            @NotNull CompletionParameters parameters,
-                            @NotNull ProcessingContext context,
-                            @NotNull CompletionResultSet result) {
+                    protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
 
                         final Project project = parameters.getOriginalFile().getProject();
                         final PsiElement elementPosition = parameters.getPosition();
@@ -149,8 +191,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                             }
                         }
 
-                        final boolean fillNamedArgumentsOnPrimaryCompletion =
-                                OpenSCADSettings.getInstance().isFillNamedArgumentsOnModuleCompletion();
+                        final boolean fillNamedArgumentsOnPrimaryCompletion = OpenSCADSettings.getInstance().isFillNamedArgumentsOnModuleCompletion();
 
                         // Add all accessible variables in the current file
                         addAccessibleVariables(result, elementPosition, null);
@@ -188,8 +229,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
 
                         if (!parameters.isAutoPopup() && parameters.getInvocationCount() >= 1) {
                             addGlobalLibrariesModulesAndFunctions(result, project, fillNamedArgumentsOnPrimaryCompletion);
-                        }
-                        else {
+                        } else {
                             final String completionShortcut = KeymapUtil.getFirstKeyboardShortcutText(
                                     ActionManager.getInstance().getAction(IdeActions.ACTION_CODE_COMPLETION));
                             result.addLookupAdvertisement("Press " + completionShortcut + " to add modules/functions from global libraries.");
@@ -293,10 +333,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
      * @param element  Psi element.
      * @param tailText Tail text to display with completion result.
      */
-    private void addModules(final CompletionResultSet result,
-                            final PsiElement element,
-                            final String tailText,
-                            final boolean fillNamedArguments) {
+    private void addModules(final CompletionResultSet result, final PsiElement element, final String tailText, final boolean fillNamedArguments) {
         result.addAllElements(getModules(element, tailText, fillNamedArguments));
     }
 
@@ -307,12 +344,11 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
      * @param tailText Tail text to display with completion result.
      * @return List of modules.
      */
-    private List<LookupElement> getModules(final PsiElement element,
-                                           final String tailText,
-                                           final boolean fillNamedArguments) {
+    private List<LookupElement> getModules(final PsiElement element, final String tailText, final boolean fillNamedArguments) {
         final List<OpenSCADModuleDeclaration> moduleDeclarations = element instanceof PsiFile file
                 ? OpenSCADPsiImplUtil.getFileModuleDeclarations(file)
                 : OpenSCADPsiImplUtil.getAccessibleModuleDeclarations(element);
+
         return convertModuleToLookupElements(moduleDeclarations, tailText, fillNamedArguments);
     }
 
@@ -583,14 +619,14 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     private static LookupElement toCachedModuleLookupElement(@NotNull final CachedModuleInfo moduleInfo,
                                                              final boolean fillNamedArguments) {
         return LookupElementBuilder
-                .create(new CachedModuleLookupObject(moduleInfo.parameters(), fillNamedArguments), moduleInfo.name())
+                .create(new CachedModuleLookupObject(moduleInfo.name(), moduleInfo.parameters(), fillNamedArguments), moduleInfo.name())
                 .withIcon(moduleInfo.icon())
                 .withInsertHandler(MODULE_CALL_INSERT_HANDLER);
     }
 
     private static LookupElement toCachedModuleWithArgsLookupElement(@NotNull final CachedModuleInfo moduleInfo) {
         return LookupElementBuilder
-                .create(new CachedModuleLookupObject(moduleInfo.parameters(), true), moduleInfo.name())
+                .create(new CachedModuleLookupObject(moduleInfo.name(), moduleInfo.parameters(), true), moduleInfo.name())
                 .withIcon(moduleInfo.icon())
                 .appendTailText(MODULE_WITH_ARGS_SUFFIX, true)
                 .withInsertHandler(MODULE_CALL_INSERT_HANDLER);
@@ -642,30 +678,36 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         editor.getCaretModel().moveToOffset(offset + 1);
     }
 
-    private static void insertFilledNamedModuleCall(@NotNull final InsertionContext context,
-                                                    @NotNull final List<ModuleParameterInfo> parameters) {
+    private static void insertFilledModuleCall(@NotNull final InsertionContext context,
+                                               @NotNull final List<ModuleParameterInfo> parameters,
+                                               final boolean positionalFirstArgument) {
         final Editor editor = context.getEditor();
         final Document document = editor.getDocument();
         final int offset = context.getTailOffset();
-        final String namedArguments = buildNamedArgumentList(parameters);
-        final int caretAfterFirstArgument = parameters.get(0).toCallSiteAssignment().length();
+        final String argumentList = buildCallSiteArgumentList(parameters, positionalFirstArgument);
+        final int caretAfterFirstArgument = parameters.isEmpty()
+                ? 0
+                : parameters.get(0).caretOffsetAfterAssignment(0, positionalFirstArgument);
 
         if (offset < document.getTextLength() && document.getText().charAt(offset) == '(') {
             final int insertOffset = offset + 1;
-            document.insertString(insertOffset, namedArguments);
+            document.insertString(insertOffset, argumentList);
             editor.getCaretModel().moveToOffset(insertOffset + caretAfterFirstArgument);
             return;
         }
 
-        document.insertString(offset, "(" + namedArguments + ")");
+        document.insertString(offset, "(" + argumentList + ")");
         editor.getCaretModel().moveToOffset(offset + 1 + caretAfterFirstArgument);
     }
 
     @NotNull
-    private static String buildNamedArgumentList(@NotNull final List<ModuleParameterInfo> parameters) {
-        return parameters.stream()
-                .map(ModuleParameterInfo::toCallSiteAssignment)
-                .collect(Collectors.joining(", "));
+    private static String buildCallSiteArgumentList(@NotNull final List<ModuleParameterInfo> parameters,
+                                                    final boolean positionalFirstArgument) {
+        final List<String> assignments = new ArrayList<>();
+        for (int i = 0; i < parameters.size(); i++) {
+            assignments.add(parameters.get(i).toCallSiteAssignment(i, positionalFirstArgument));
+        }
+        return String.join(", ", assignments);
     }
 
     static boolean lookupElementFillsNamedArguments(@NotNull final LookupElement item) {

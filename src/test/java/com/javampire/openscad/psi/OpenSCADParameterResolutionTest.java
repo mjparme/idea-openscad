@@ -53,6 +53,20 @@ public class OpenSCADParameterResolutionTest extends BasePlatformTestCase {
         assertEquals("delta", ((OpenSCADArgDeclaration) resolved).getName());
     }
 
+    public void testBuiltinModuleNamedParametersResolve() {
+        myFixture.configureByText("test.scad", "cube(size = [1, 1, 1], center = true);");
+        final List<OpenSCADParameterReference> paramRefs = new ArrayList<>(
+                PsiTreeUtil.findChildrenOfType(myFixture.getFile(), OpenSCADParameterReference.class));
+        assertEquals(2, paramRefs.size());
+        for (OpenSCADParameterReference paramRef : paramRefs) {
+            final PsiReference reference = paramRef.getReference();
+            assertNotNull(reference);
+            final var resolved = reference.resolve();
+            assertTrue("Failed to resolve parameter: " + paramRef.getName(), resolved instanceof OpenSCADArgDeclaration);
+            assertEquals(paramRef.getName(), ((OpenSCADArgDeclaration) resolved).getName());
+        }
+    }
+
     public void testModuleParameterDoesNotProduceUnresolvedInspection() {
         myFixture.enableInspections(OpenSCADUnresolvedReferenceInspection.class);
         myFixture.configureByText("test.scad", """

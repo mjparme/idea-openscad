@@ -1,3 +1,4 @@
+// POSITIONAL_FIRST_ARGUMENT: cube, sphere, rotate, translate
 
 // Linear Extrusion is a modeling operation that takes a 2D polygon as input
 // and extends it in the third dimension. This way a 3D shape is created.

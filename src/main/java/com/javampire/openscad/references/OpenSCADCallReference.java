@@ -6,6 +6,10 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.IncorrectOperationException;
+import com.javampire.openscad.psi.BuiltinSkeletons;
+import com.javampire.openscad.psi.OpenSCADBuiltinExprRef;
+import com.javampire.openscad.psi.OpenSCADBuiltinObjRef;
+import com.javampire.openscad.psi.OpenSCADCommonOpRef;
 import com.javampire.openscad.psi.OpenSCADFunctionDeclaration;
 import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
 import com.javampire.openscad.psi.OpenSCADNamedElement;
@@ -50,6 +54,12 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
         }
         if (myElement instanceof OpenSCADFunctionNameRef) {
             return resolveScopedFunctionReferences();
+        }
+        if (myElement instanceof OpenSCADBuiltinObjRef || myElement instanceof OpenSCADCommonOpRef) {
+            return resolveBuiltinModuleReferences();
+        }
+        if (myElement instanceof OpenSCADBuiltinExprRef) {
+            return resolveBuiltinFunctionReferences();
         }
         Project project = myElement.getProject();
         final OpenSCADReferenceResolver resolver = myElement.getReferenceResolver();
@@ -111,6 +121,26 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
             results.add(new PsiElementResolveResult(calledElement));
         }
         return results.toArray(ResolveResult.EMPTY_ARRAY);
+    }
+
+    @NotNull
+    private ResolveResult[] resolveBuiltinModuleReferences() {
+        final OpenSCADModuleDeclaration declaration =
+                BuiltinSkeletons.findModuleDeclaration(myElement.getProject(), referencedName);
+        if (declaration != null) {
+            return new ResolveResult[]{new PsiElementResolveResult(declaration)};
+        }
+        return resolveIndexedReferences(OpenSCADModuleIndex.getInstance());
+    }
+
+    @NotNull
+    private ResolveResult[] resolveBuiltinFunctionReferences() {
+        final OpenSCADFunctionDeclaration declaration =
+                BuiltinSkeletons.findFunctionDeclaration(myElement.getProject(), referencedName);
+        if (declaration != null) {
+            return new ResolveResult[]{new PsiElementResolveResult(declaration)};
+        }
+        return resolveIndexedReferences(OpenSCADFunctionIndex.getInstance());
     }
 
     @NotNull
