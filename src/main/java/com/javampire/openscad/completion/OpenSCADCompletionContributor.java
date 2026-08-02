@@ -186,16 +186,13 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                         addLocalLibrariesModulesAndFunctions(result, elementPosition, fillNamedArgumentsOnPrimaryCompletion);
                         ProgressManager.checkCanceled();
 
-                        // Second completion case
-                        final String completionShortcut = KeymapUtil.getFirstKeyboardShortcutText(
-                                ActionManager.getInstance().getAction(IdeActions.ACTION_CODE_COMPLETION));
-                        if (parameters.getInvocationCount() % 2 == 0) {
-                            // Add all possible functions and method from global libraries
+                        if (!parameters.isAutoPopup() && parameters.getInvocationCount() >= 1) {
                             addGlobalLibrariesModulesAndFunctions(result, project, fillNamedArgumentsOnPrimaryCompletion);
-                            result.addLookupAdvertisement("Press " + completionShortcut + " to see accessible variables, functions and methods.");
                         }
                         else {
-                            result.addLookupAdvertisement("Press " + completionShortcut + " to add non-imported functions and methods.");
+                            final String completionShortcut = KeymapUtil.getFirstKeyboardShortcutText(
+                                    ActionManager.getInstance().getAction(IdeActions.ACTION_CODE_COMPLETION));
+                            result.addLookupAdvertisement("Press " + completionShortcut + " to add modules/functions from global libraries.");
                         }
                     }
                 }
