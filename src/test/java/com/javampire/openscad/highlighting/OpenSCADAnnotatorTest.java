@@ -23,6 +23,33 @@ public class OpenSCADAnnotatorTest extends BasePlatformTestCase {
         assertHighlightKey("myFunc", OpenSCADSyntaxHighlighter.FUNCTION_NAME, highlights, 1);
     }
 
+    public void testModuleParameterUsesSameColorInDeclarationAndBody() {
+        myFixture.configureByText("test.scad", """
+                fanOpeningOuterLength = 10;
+                module mainShape(delta = 0) {
+                    funnelInputLength = fanOpeningOuterLength - delta;
+                    cube(delta);
+                }
+                """);
+
+        final List<HighlightInfo> highlights = myFixture.doHighlighting();
+
+        assertHighlightKey("delta", OpenSCADSyntaxHighlighter.PARAMETER_NAME, highlights, 3);
+        assertHighlightKey("fanOpeningOuterLength", OpenSCADSyntaxHighlighter.VARIABLE_NAME, highlights, 2);
+        assertHighlightKey("funnelInputLength", OpenSCADSyntaxHighlighter.VARIABLE_NAME, highlights, 1);
+    }
+
+    public void testFunctionParameterUsesParameterColor() {
+        myFixture.configureByText("test.scad", """
+                function add(x, y) = x + y;
+                """);
+
+        final List<HighlightInfo> highlights = myFixture.doHighlighting();
+
+        assertHighlightKey("x", OpenSCADSyntaxHighlighter.PARAMETER_NAME, highlights, 2);
+        assertHighlightKey("y", OpenSCADSyntaxHighlighter.PARAMETER_NAME, highlights, 2);
+    }
+
     private static void assertHighlightKey(String text,
                                            TextAttributesKey expectedKey,
                                            List<HighlightInfo> highlights,

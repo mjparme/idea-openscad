@@ -23,6 +23,7 @@ public class OpenSCADSyntaxHighlighter extends SyntaxHighlighterBase {
     public static final TextAttributesKey MODULE_NAME = createTextAttributesKey("OPENSCAD_MODULE_NAME", DefaultLanguageHighlighterColors.CLASS_NAME);
     public static final TextAttributesKey FUNCTION_NAME = createTextAttributesKey("OPENSCAD_FUNCTION_NAME", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION);
     public static final TextAttributesKey VARIABLE_NAME = createTextAttributesKey("OPENSCAD_VARIABLE_NAME", DefaultLanguageHighlighterColors.LOCAL_VARIABLE);
+    public static final TextAttributesKey PARAMETER_NAME = createTextAttributesKey("OPENSCAD_PARAMETER_NAME", DefaultLanguageHighlighterColors.PARAMETER);
     public static final TextAttributesKey BRACES = createTextAttributesKey("OPENSCAD_BRACES", SEPARATOR);
     public static final TextAttributesKey BRACKETS = createTextAttributesKey("OPENSCAD_BRACKETS", SEPARATOR);
     public static final TextAttributesKey ANGLE_BRACKETS = createTextAttributesKey("OPENSCAD_ANGLE_BRACKETS", SEPARATOR);
