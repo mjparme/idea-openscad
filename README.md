@@ -1,7 +1,4 @@
-![Workflow build](https://github.com/ldenisey/idea-openscad/actions/workflows/build.yml/badge.svg)
-[![JetBrains Plugin Version](https://img.shields.io/jetbrains/plugin/v/11198-openscad-language-support?label=Latest%20Plugin%20Release)](https://plugins.jetbrains.com/plugin/11198-openscad-language-support/versions)
-[![JetBrains Plugin Rating](https://img.shields.io/jetbrains/plugin/r/rating/11198-openscad-language-support)](https://plugins.jetbrains.com/plugin/11198-openscad-language-support/reviews)
-[![JetBrains Plugin Downloads](https://img.shields.io/jetbrains/plugin/d/11198-openscad-language-support)](https://plugins.jetbrains.com/plugin/11198-openscad-language-support)
+![Workflow build](https://github.com/mjparme/idea-openscad/actions/workflows/build.yml/badge.svg)
 
 <!-- Plugin description -->
 # OpenSCAD Language Support for IntelliJ Platform
@@ -19,7 +16,15 @@
 * Color picking
 * Actions for opening OpenSCAD and exporting model
 * Color scheme close to the built-in OpenSCAD editor
+* Rename support for modules, functions, and scoped variables
+* Semantic highlighting for module, function, and variable names
 <!-- Plugin description end -->
+
+## Fork
+
+This is a maintained fork of [ldenisey/idea-openscad](https://github.com/ldenisey/idea-openscad) by Lucien Denisey.
+The original plugin on JetBrains Marketplace (`com.javampire.idea-openscad`) is no longer actively maintained.
+This fork uses plugin ID `com.mjparme.idea-openscad` and is published separately.
 
 ## Configuration
 
@@ -71,7 +76,7 @@ Right-clicking on a scad file will give you access to two context menu actions :
 
 ## Issues and requests
 
-Issues and requests are tracked in the [Issues tab](https://github.com/ldenisey/idea-openscad/issues).
+Issues and requests are tracked in the [Issues tab](https://github.com/mjparme/idea-openscad/issues).
 
 ## How to contribute
 

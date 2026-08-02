@@ -12,8 +12,24 @@
 
 ### Fixed
 
-- Changelog plugin configuration
-- [PR-104](https://github.com/ldenisey/idea-openscad/pull/104) Bug: parsing of multi-line comment ending with 2 stars
+## 3.0.0
+
+### Added
+
+- Rename support for modules, functions, and scoped variables
+- Semantic syntax highlighting for module, function, and variable names
+- Shift+F6 rename from module declarations and call sites
+
+### Changed
+
+- Forked from upstream as `com.mjparme.idea-openscad` for continued maintenance and JetBrains Marketplace release
+- Upgraded build to IntelliJ Platform 2026.2
+- Updated default syntax highlighting colors for identifiers, module names, function names, and variable names
+
+### Fixed
+
+- Module rename from declarations and cross-file ambiguous names
+- Shift+F6 rename handler chooser dialog conflict with platform inplace rename
 
 ## 2.4.0
 

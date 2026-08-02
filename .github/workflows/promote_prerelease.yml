@@ -1,46 +1,38 @@
-# GitHub Actions Workflow to handle the release process based on the pre-release prepared with the Build workflow.
-# Will delete the latest pre-release and build a new release with version incrementation.
+# Promote the latest SNAPSHOT pre-release to a marketplace release.
+# Requires JETBRAINS_PUBLISH_TOKEN repository secret.
 
 name: PromotePreRelease
 on: [ workflow_dispatch ]
 
 jobs:
-  prepare:
-    name: Prepare release
+  release:
+    name: Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: 17
+          java-version: 25
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: gradle/wrapper-validation-action@v1.1.0
 
-      # Export pre-release (snapshot) version
       - name: Export base version properties
         id: baseProperties
         shell: bash
         run: |
           PROPERTIES="$(./gradlew properties --console=plain -q)"
           VERSION="$(echo "$PROPERTIES" | grep "^version:" | cut -f2- -d ' ')"
-
-          echo "$VERSION"
           echo "baseVersion=$VERSION" >> $GITHUB_OUTPUT
 
-      # Set release version
-      - name: Trim dev suffix
-        id: setReleaseVersions
-        shell: bash
-        run: ./gradlew setversions --suffix=false
+      - name: Remove SNAPSHOT suffix
+        run: sed -i 's/-SNAPSHOT//' gradle.properties
 
-      # Build plugin using Jetbrains Gradle task
       - name: Build Plugin
         run: ./gradlew buildPlugin
 
-      # Export release version, name and changelog
-      - name: Export new commit properties
+      - name: Export release properties
         id: properties
         shell: bash
         run: |
@@ -55,60 +47,70 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
 
-      # Publish the plugin to the marketplace
       - name: Publish Plugin
         env:
-          intellijPublishToken: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
         run: ./gradlew publishPlugin
 
-      # Update Unreleased section with the current version in the changelog
       - name: Patch Changelog
         run: ./gradlew patchChangelog
 
-      # Commit patched changelog and release version
-      - name: Commit files
+      - name: Commit release version
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Release ${{ steps.properties.outputs.version }}"
           skip_fetch: true
 
-      # Get commit sha
-      - shell: bash
+      - name: Export release commit
         id: sha
-        run: |
-          RELEASE_SHA="$(git rev-parse HEAD)"
-          echo "releaseSha=$RELEASE_SHA" >> $GITHUB_OUTPUT
+        shell: bash
+        run: echo "releaseSha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
-      # Create GitHub release
       - name: Create Release
-        id: createRelease
         uses: ncipollo/release-action@v1
         with:
           name: ${{ steps.properties.outputs.version }}
           tag: ${{ steps.properties.outputs.version }}
-          commit: ${{ steps.properties.outputs.releaseSha }}
+          commit: ${{ steps.sha.outputs.releaseSha }}
           body: ${{ steps.properties.outputs.changelog }}
           artifacts: ./build/distributions/${{ steps.properties.outputs.name }}-${{ steps.properties.outputs.version }}.zip
           artifactContentType: application/zip
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Delete promoted pre-release
-      - name: Delete previous release
-        id: deletePreviousRelease
+      - name: Delete previous pre-release
         uses: dev-drprasad/delete-tag-and-release@v1.0.1
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.baseProperties.outputs.baseVersion }}
 
-      # Set next dev version
-      - name: Increment version for dev
-        id: setDevVersions
+      - name: Bump to next dev version
         shell: bash
-        run: ./gradlew setversions --suffix=true --increment=technical
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import re
 
-      # Commit dev version
-      - name: Commit files
+          path = pathlib.Path("gradle.properties")
+          content = path.read_text()
+          match = re.search(r"^pluginVersion = (\d+)\.(\d+)\.(\d+)$", content, re.MULTILINE)
+          if not match:
+              raise SystemExit("Expected release pluginVersion in gradle.properties")
+          major, minor, patch = map(int, match.groups())
+          patch += 1
+          content = re.sub(
+              r"^pluginVersion = .*$",
+              f"pluginVersion = {major}.{minor}.{patch}-SNAPSHOT",
+              content,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          path.write_text(content)
+          PY
+
+      - name: Commit dev version
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "To dev version"
+          skip_fetch: true

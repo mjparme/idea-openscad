@@ -1,7 +1,7 @@
 <idea-plugin>
-    <id>com.javampire.idea-openscad</id>
+    <id>com.mjparme.idea-openscad</id>
     <name>OpenSCAD Language Support</name>
-    <vendor url="https://github.com/ldenisey/idea-openscad">Lucien Denisey</vendor>
+    <vendor url="https://github.com/mjparme/idea-openscad">Michael Parmeley</vendor>
 
     <description><![CDATA[
     <p><a href="https://openscad.org/index.html">OpenSCAD</a> language plugin for IntelliJ Platform IDEs (Idea, PyCharm, etc.). It provides :</p>
@@ -17,7 +17,10 @@
 		<li>Color picking</li>
         <li>Actions for opening OpenSCAD and exporting model</li>
         <li>Color scheme close to the built-in OpenSCAD editor</li>
+        <li>Rename support for modules, functions, and scoped variables</li>
+        <li>Semantic highlighting for module, function, and variable names</li>
 	</ul>
+    <p>Fork of the original <a href="https://github.com/ldenisey/idea-openscad">idea-openscad</a> plugin by Lucien Denisey, maintained at <a href="https://github.com/mjparme/idea-openscad">github.com/mjparme/idea-openscad</a>.</p>
     ]]></description>
 
     <extensions defaultExtensionNs="com.intellij">
