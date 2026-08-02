@@ -11,6 +11,7 @@ import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
 import com.javampire.openscad.psi.OpenSCADNamedElement;
 import com.javampire.openscad.psi.OpenSCADResolvableElement;
 import com.javampire.openscad.psi.OpenSCADVariableDeclaration;
+import com.javampire.openscad.psi.OpenSCADArgDeclaration;
 import com.javampire.openscad.psi.OpenSCADVariableRefExpr;
 import com.javampire.openscad.psi.OpenSCADModuleObjNameRef;
 import com.javampire.openscad.psi.OpenSCADModuleOpNameRef;
@@ -82,6 +83,20 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
                 return scopedResults.toArray(ResolveResult.EMPTY_ARRAY);
             }
             return new ResolveResult[]{scopedResults.get(scopedResults.size() - 1)};
+        }
+        final List<OpenSCADArgDeclaration> accessibleParameters =
+                OpenSCADPsiImplUtil.getAccessibleArgumentDeclarations(myElement);
+        final List<ResolveResult> parameterResults = new ArrayList<>();
+        for (OpenSCADArgDeclaration declaration : accessibleParameters) {
+            if (referencedName.equals(declaration.getName())) {
+                parameterResults.add(new PsiElementResolveResult(declaration));
+            }
+        }
+        if (!parameterResults.isEmpty()) {
+            if (parameterResults.size() == 1) {
+                return parameterResults.toArray(ResolveResult.EMPTY_ARRAY);
+            }
+            return new ResolveResult[]{parameterResults.get(parameterResults.size() - 1)};
         }
         Project project = myElement.getProject();
         final OpenSCADReferenceResolver resolver = myElement.getReferenceResolver();

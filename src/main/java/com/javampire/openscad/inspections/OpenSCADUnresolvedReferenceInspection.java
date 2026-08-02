@@ -24,6 +24,24 @@ public class OpenSCADUnresolvedReferenceInspection extends LocalInspectionTool {
             public void visitVariableRefExpr(@NotNull OpenSCADVariableRefExpr element) {
                 checkUnresolvedReference(element, holder);
             }
+
+            @Override
+            public void visitParameterReference(@NotNull OpenSCADParameterReference element) {
+                final PsiReference reference = element.getReference();
+                if (reference == null || reference.resolve() != null) {
+                    return;
+                }
+                final String name = element.getName();
+                if (name == null) {
+                    return;
+                }
+                final PsiElement highlightTarget = element.getNameIdentifier() != null ? element.getNameIdentifier() : element;
+                holder.registerProblem(
+                        highlightTarget,
+                        "Cannot resolve parameter '" + name + "'",
+                        ProblemHighlightType.LIKE_UNKNOWN_SYMBOL
+                );
+            }
         };
     }
 
