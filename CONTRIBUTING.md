@@ -10,7 +10,7 @@ If they are linked to an issue please refer to it.
 1. Create a [JetBrains Marketplace](https://plugins.jetbrains.com/) account and generate a [permanent token](https://plugins.jetbrains.com/author/me/tokens).
 2. Add the token as repository secret `JETBRAINS_PUBLISH_TOKEN` in GitHub.
 3. Push to `master` to create a SNAPSHOT pre-release artifact via the Build workflow.
-4. Run the **PromotePreRelease** workflow manually to publish `3.0.0` (or current release version) to the marketplace.
+4. Run the **PromotePreRelease** workflow manually to publish `1.0.0` (or current release version) to the marketplace.
 
 The plugin ID is `com.mjparme.idea-openscad`. The first publish creates the marketplace listing.
 
