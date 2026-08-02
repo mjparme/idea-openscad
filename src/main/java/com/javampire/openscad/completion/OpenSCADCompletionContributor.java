@@ -3,6 +3,9 @@ package com.javampire.openscad.completion;
 import com.intellij.codeInsight.completion.*;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.application.ApplicationManager;
@@ -40,6 +43,29 @@ import static com.javampire.openscad.parser.OpenSCADParserTokenSets.*;
 
 public class OpenSCADCompletionContributor extends CompletionContributor {
     private static final Logger LOG = Logger.getInstance(OpenSCADCompletionContributor.class);
+
+    private static final InsertHandler<LookupElement> ZERO_ARG_MODULE_CALL_INSERT_HANDLER = (context, item) -> {
+        final Editor editor = context.getEditor();
+        final Document document = editor.getDocument();
+        final int offset = context.getTailOffset();
+        if (offset < document.getTextLength() && document.getText().charAt(offset) == '(') {
+            return;
+        }
+        document.insertString(offset, "()");
+        editor.getCaretModel().moveToOffset(offset + 2);
+    };
+
+    private static final InsertHandler<LookupElement> PARAMETERIZED_MODULE_CALL_INSERT_HANDLER = (context, item) -> {
+        final Editor editor = context.getEditor();
+        final Document document = editor.getDocument();
+        final int offset = context.getTailOffset();
+        if (offset < document.getTextLength() && document.getText().charAt(offset) == '(') {
+            editor.getCaretModel().moveToOffset(offset + 1);
+            return;
+        }
+        document.insertString(offset, "()");
+        editor.getCaretModel().moveToOffset(offset + 1);
+    };
 
     private static final String _FROM_ = " from ";
     private static final String BUILT_IN_MODULES_FILENAME = "/com/javampire/openscad/skeletons/builtin_modules.scad";
@@ -248,7 +274,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         final List<OpenSCADModuleDeclaration> moduleDeclarations = element instanceof PsiFile file
                 ? OpenSCADPsiImplUtil.getFileModuleDeclarations(file)
                 : OpenSCADPsiImplUtil.getAccessibleModuleDeclarations(element);
-        return convertToLookupElements(moduleDeclarations, tailText);
+        return convertModuleToLookupElements(moduleDeclarations, tailText);
     }
 
     /**
@@ -285,7 +311,10 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
             if (moduleSkeleton == null) {
                 LOG.warn("Can not parse builtin modules skeleton file, completion will not be available on modules.");
             } else {
-                builtinModules = getModules(moduleSkeleton, null);
+                builtinModules = PsiTreeUtil.getChildrenOfTypeAsList(moduleSkeleton, OpenSCADModuleDeclaration.class).stream()
+                        .map(OpenSCADCompletionContributor::toCachedModuleLookupElement)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
             }
         }
         result.addAllElements(builtinModules);
@@ -414,7 +443,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                 .map(presentation -> {
                     final String text = presentation.getPresentableText();
                     if (text == null) return null;
-                    LookupElementBuilder builder = LookupElementBuilder.create(presentation.getPresentableText()).withIcon(presentation.getIcon(true));
+                    LookupElementBuilder builder = LookupElementBuilder.create(text).withIcon(presentation.getIcon(true));
                     if (tailText != null) {
                         builder = builder.appendTailText(tailText, true);
                     }
@@ -422,5 +451,49 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    private List<LookupElement> convertModuleToLookupElements(final List<OpenSCADModuleDeclaration> modules, final String tailText) {
+        return modules.stream()
+                .map(module -> toModuleLookupElement(module, tailText))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private static LookupElement toModuleLookupElement(@NotNull final OpenSCADModuleDeclaration module, final String tailText) {
+        final ItemPresentation presentation = OpenSCADPsiImplUtil.getPresentation(module);
+        final String text = presentation.getPresentableText();
+        if (text == null) {
+            return null;
+        }
+        LookupElementBuilder builder = LookupElementBuilder.create(module, text).withIcon(presentation.getIcon(true));
+        builder = builder.withInsertHandler(hasNoParameters(module)
+                ? ZERO_ARG_MODULE_CALL_INSERT_HANDLER
+                : PARAMETERIZED_MODULE_CALL_INSERT_HANDLER);
+        if (tailText != null) {
+            builder = builder.appendTailText(tailText, true);
+        }
+        return builder;
+    }
+
+    private static LookupElement toCachedModuleLookupElement(@NotNull final OpenSCADModuleDeclaration module) {
+        final ItemPresentation presentation = OpenSCADPsiImplUtil.getPresentation(module);
+        final String text = presentation.getPresentableText();
+        if (text == null) {
+            return null;
+        }
+        LookupElementBuilder builder = LookupElementBuilder.create(text).withIcon(presentation.getIcon(true));
+        builder = builder.withInsertHandler(hasNoParameters(module)
+                ? ZERO_ARG_MODULE_CALL_INSERT_HANDLER
+                : PARAMETERIZED_MODULE_CALL_INSERT_HANDLER);
+        return builder;
+    }
+
+    private static boolean hasNoParameters(@NotNull final OpenSCADModuleDeclaration module) {
+        final OpenSCADArgDeclarationList argList = module.getArgDeclarationList();
+        if (argList == null) {
+            return true;
+        }
+        return PsiTreeUtil.getChildrenOfTypeAsList(argList, OpenSCADArgDeclaration.class).isEmpty();
     }
 }
