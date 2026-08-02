@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.IStubElementType;
 import com.javampire.openscad.OpenSCADLanguage;
 import com.javampire.openscad.psi.OpenSCADElementFactory;
+import com.javampire.openscad.psi.OpenSCADPsiImplUtil;
 import com.javampire.openscad.psi.OpenSCADTypes;
 import org.jetbrains.annotations.NotNull;
 
@@ -46,6 +47,11 @@ public class OpenSCADVariableDeclarationStubElementImpl extends StubBasedPsiElem
             getNode().replaceChild(nameNode, newNameElement.getNode());
         }
         return this;
+    }
+
+    @Override
+    public int getTextOffset() {
+        return OpenSCADPsiImplUtil.getTextOffset(this);
     }
 
     @Override

@@ -10,7 +10,7 @@ public class OpenSCADFindUsagesProvider implements FindUsagesProvider {
 
     @Override
     public boolean canFindUsagesFor(@NotNull PsiElement psiElement) {
-        return OpenSCADRenameUtil.isRenamable(psiElement);
+        return OpenSCADRenameUtil.getRenamableElement(psiElement) != null;
     }
 
     @Nullable

@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.IStubElementType;
 import com.javampire.openscad.OpenSCADLanguage;
 import com.javampire.openscad.psi.OpenSCADNamedElementImpl;
+import com.javampire.openscad.psi.OpenSCADPsiImplUtil;
 import org.jetbrains.annotations.NotNull;
 
 public class OpenSCADModuleDeclarationStubElementImpl extends StubBasedPsiElementBase<OpenSCADModuleStub> {
@@ -39,6 +40,11 @@ public class OpenSCADModuleDeclarationStubElementImpl extends StubBasedPsiElemen
 
     public PsiElement setName(@NotNull final String newName) {
         return OpenSCADNamedElementImpl.setName(this, newName);
+    }
+
+    @Override
+    public int getTextOffset() {
+        return OpenSCADPsiImplUtil.getTextOffset(this);
     }
 
     @Override
