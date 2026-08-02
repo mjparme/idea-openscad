@@ -78,7 +78,10 @@ public class OpenSCADSettingsConfigurable implements SearchableConfigurable.Pare
         final OpenSCADSettings openSCADSettings = OpenSCADSettings.getInstance();
         openSCADSettings.setOpenSCADExecutable(openSCADExecutablePath.getText());
         openSCADSettings.setAllowPreviewEditor(allowPreviewEditor.isSelected());
-        OpenSCADSettingsStartupActivity.updateOpenSCADLibraries(myProject);
+        OpenSCADInfo.reset();
+        if (openSCADSettings.hasExecutable()) {
+            OpenSCADSettingsStartupActivity.updateOpenSCADLibraries(myProject);
+        }
     }
 
     @Override

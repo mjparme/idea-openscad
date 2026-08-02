@@ -1,5 +1,6 @@
 package com.javampire.openscad.editor;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.fileEditor.*;
 import com.intellij.openapi.fileEditor.impl.text.PsiAwareTextEditorProvider;
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider;
@@ -7,10 +8,13 @@ import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.FileIndexFacade;
 import com.intellij.openapi.vfs.VirtualFile;
-import org.jetbrains.annotations.NonNls;
+import com.javampire.openscad.settings.OpenSCADSettings;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.NonNls;
 
 public class OpenSCADTextEditorWithPreviewProvider implements AsyncFileEditorProvider, DumbAware {
+
+    private static final Logger LOG = Logger.getInstance(OpenSCADTextEditorWithPreviewProvider.class);
 
     @NotNull
     private final TextEditorProvider textEditorProvider;
@@ -24,10 +28,21 @@ public class OpenSCADTextEditorWithPreviewProvider implements AsyncFileEditorPro
 
     @Override
     public boolean accept(@NotNull final Project project, @NotNull final VirtualFile file) {
-        return textEditorProvider.accept(project, file)
-                && previewEditorProvider.accept(project, file)
-                // Excluding files that are not part of a module : external libraries, skeletons, external files, ...
-                && FileIndexFacade.getInstance(project).getModuleForFile(file) != null;
+        if (!textEditorProvider.accept(project, file)) {
+            return false;
+        }
+        if (!previewEditorProvider.accept(project, file)) {
+            final OpenSCADSettings settings = OpenSCADSettings.getInstance();
+            LOG.warn("OpenSCAD split preview not used: allowPreview=" + settings.isAllowPreviewEditor()
+                    + ", jcef=" + JcefSupport.isSupported()
+                    + ", executable=" + settings.hasExecutable());
+            return false;
+        }
+        if (FileIndexFacade.getInstance(project).getModuleForFile(file) == null) {
+            LOG.warn("OpenSCAD split preview not used: file is outside project modules (" + file.getPath() + ")");
+            return false;
+        }
+        return true;
     }
 
     @NotNull

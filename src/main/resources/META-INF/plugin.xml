@@ -35,7 +35,7 @@
 
         <projectConfigurable groupId="language" instance="com.javampire.openscad.settings.OpenSCADSettingsConfigurable" id="OpenSCADSettings" displayName="OpenSCAD"/>
         <applicationService serviceImplementation="com.javampire.openscad.settings.OpenSCADSettings"/>
-        <postStartupActivity implementation="com.javampire.openscad.settings.OpenSCADSettingsStartupActivity"/>
+        <postStartupActivity implementation="com.javampire.openscad.settings.OpenSCADSettingsProjectActivity"/>
 
         <fileEditorProvider implementation="com.javampire.openscad.editor.OpenSCADTextEditorWithPreviewProvider"/>
         <lang.syntaxHighlighterFactory language="OpenSCAD" implementationClass="com.javampire.openscad.highlighting.OpenSCADSyntaxHighlighterFactory"/>
@@ -85,5 +85,6 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
+    <depends optional="true">com.intellij.modules.jcef</depends>
 
 </idea-plugin>

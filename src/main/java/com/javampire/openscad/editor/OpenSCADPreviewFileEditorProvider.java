@@ -6,7 +6,6 @@ import com.intellij.openapi.fileEditor.FileEditorPolicy;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.ui.jcef.JBCefApp;
 import com.javampire.openscad.OpenSCADFileType;
 import com.javampire.openscad.settings.OpenSCADSettings;
 import org.jetbrains.annotations.NonNls;
@@ -18,7 +17,7 @@ public class OpenSCADPreviewFileEditorProvider implements AsyncFileEditorProvide
     public boolean accept(@NotNull final Project project, @NotNull final VirtualFile scadFile) {
         return scadFile.getFileType() == OpenSCADFileType.INSTANCE
                 && OpenSCADSettings.getInstance().isAllowPreviewEditor()
-                && JBCefApp.isSupported();
+                && JcefSupport.isSupported();
     }
 
     @Override

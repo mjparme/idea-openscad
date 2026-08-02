@@ -9,6 +9,7 @@ import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
 import com.intellij.notification.NotificationType;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.impl.text.TextEditorImpl;
@@ -23,7 +24,6 @@ import com.intellij.openapi.roots.OrderRootType;
 import com.intellij.openapi.roots.libraries.Library;
 import com.intellij.openapi.roots.libraries.LibraryTable;
 import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar;
-import com.intellij.openapi.startup.StartupActivity;
 import com.intellij.openapi.util.SystemInfo;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -38,7 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class OpenSCADSettingsStartupActivity implements StartupActivity {
+public class OpenSCADSettingsStartupActivity {
 
     private final static String DO_NOT_ASK_AGAIN_ALLOW_PREVIEW_ID = "Notification.DoNotAsk-OpenSCAD-allow_preview";
 
@@ -67,11 +67,13 @@ public class OpenSCADSettingsStartupActivity implements StartupActivity {
 
     private final static String OPENSCAD_LIBRARY_NAME = "OpenSCAD Libraries";
 
-    @Override
-    public void runActivity(@NotNull final Project project) {
-        if (!FilenameIndex.getAllFilesByExt(project, OpenSCADFileType.INSTANCE.getDefaultExtension()).isEmpty()) {
-            final OpenSCADSettings settings = OpenSCADSettings.getInstance();
-            if (!settings.hasExecutable()) {
+    public static void runStartup(@NotNull final Project project) {
+        if (!ReadAction.compute(() -> projectContainsScadFiles(project))) {
+            return;
+        }
+
+        final OpenSCADSettings settings = OpenSCADSettings.getInstance();
+        if (!settings.hasExecutable()) {
                 ProgressManager.getInstance().runProcessWithProgressSynchronously(
                         () -> {
                             final String suggestedExecutablePath = searchExecutablePath();
@@ -86,6 +88,7 @@ public class OpenSCADSettingsStartupActivity implements StartupActivity {
                             } else {
                                 settings.setOpenSCADExecutable(suggestedExecutablePath);
                                 settings.setAllowPreviewEditor(true);
+                                OpenSCADInfo.reset();
                                 new Notification(
                                         OpenSCADSettings.class.getSimpleName(),
                                         "OpenSCAD executable has been found",
@@ -98,18 +101,21 @@ public class OpenSCADSettingsStartupActivity implements StartupActivity {
                         false,
                         project
                 );
-            }
+        }
 
-            if (settings.hasExecutable()) {
-                updateOpenSCADLibraries(project);
-                if (!settings.isAllowPreviewEditor() && !PropertiesComponent.getInstance(project).getBoolean(DO_NOT_ASK_AGAIN_ALLOW_PREVIEW_ID, false)) {
-                    createPreviewAvailableNotification(project, settings).notify(project);
-                }
+        if (settings.hasExecutable()) {
+            updateOpenSCADLibraries(project);
+            if (!settings.isAllowPreviewEditor() && !PropertiesComponent.getInstance(project).getBoolean(DO_NOT_ASK_AGAIN_ALLOW_PREVIEW_ID, false)) {
+                createPreviewAvailableNotification(project, settings).notify(project);
             }
         }
     }
 
-    private Notification createPreviewAvailableNotification(@NotNull final Project project, @NotNull final OpenSCADSettings settings) {
+    private static boolean projectContainsScadFiles(@NotNull final Project project) {
+        return !FilenameIndex.getAllFilesByExt(project, OpenSCADFileType.INSTANCE.getDefaultExtension()).isEmpty();
+    }
+
+    private static Notification createPreviewAvailableNotification(@NotNull final Project project, @NotNull final OpenSCADSettings settings) {
         final Notification previewNotification = new Notification(
                 OpenSCADSettings.class.getSimpleName(),
                 "OpenSCAD files preview is available",
@@ -144,6 +150,9 @@ public class OpenSCADSettingsStartupActivity implements StartupActivity {
     }
 
     public static void updateOpenSCADLibraries(final Project project) {
+        if (!OpenSCADSettings.getInstance().hasExecutable()) {
+            return;
+        }
         final List<String> libraryPaths = OpenSCADInfo.getLibraryPaths();
         if (libraryPaths != null && !libraryPaths.isEmpty()) {
             ApplicationManager.getApplication().runWriteAction(() -> {

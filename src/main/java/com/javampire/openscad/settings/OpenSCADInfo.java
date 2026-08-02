@@ -24,7 +24,7 @@ public class OpenSCADInfo {
             // Run the OpenSCAD executable to get info
             final OpenSCADExecutor executor = OpenSCADExecutor.execute(List.of("--info"));
             if (executor == null) {
-                LOG.warn(OpenSCADExecutor.ERROR_NO_EXE);
+                // OpenSCADExecutor already logs when no executable is configured.
             } else if (executor.getException() != null) {
                 LOG.error(String.format(OpenSCADExecutor.ERROR_EXCEPTION, executor.getCommand()), executor.getException());
             } else if (executor.getReturnCode() != 0) {

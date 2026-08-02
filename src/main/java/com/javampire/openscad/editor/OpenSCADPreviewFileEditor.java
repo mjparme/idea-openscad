@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.fileEditor.*;
 import com.intellij.openapi.fileEditor.impl.EditorHistoryManager;
@@ -32,6 +33,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.HierarchyEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
 
@@ -44,7 +46,8 @@ import static com.intellij.openapi.fileEditor.TextEditorWithPreview.Layout.SHOW_
 public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements FileEditor {
     private static final Logger LOG = Logger.getInstance(OpenSCADPreviewFileEditor.class);
     private final Project project;
-    private final OpenSCADPreviewSite previewSite;
+    private final VirtualFile scadFile;
+    private @Nullable OpenSCADPreviewSite previewSite;
     private final MainPanel mainPanel;
     private @Nullable JCEFHtmlPanel htmlPanel;
     private ActionToolbar previewToolbar;
@@ -58,16 +61,17 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
 
     public OpenSCADPreviewFileEditor(@NotNull final Project project, @NotNull final VirtualFile scadFile) {
         this.project = project;
-        this.previewSite = OpenSCADPreviewSiteFactory.getInstance(project).createSite(scadFile);
+        this.scadFile = scadFile;
         this.mainPanel = new MainPanel();
+        this.mainPanel.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && mainPanel.isShowing()) {
+                scheduleAttachHtmlPanel();
+            }
+        });
         this.mainPanel.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentShown(ComponentEvent e) {
-                mySwingAlarm.addRequest(
-                        () -> attachHtmlPanel(),
-                        0,
-                        ModalityState.stateForComponent(getComponent())
-                );
+                scheduleAttachHtmlPanel();
             }
 
             @Override
@@ -79,18 +83,32 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
                 );
             }
         });
+        ApplicationManager.getApplication().invokeLater(
+                this::scheduleAttachHtmlPanel,
+                ModalityState.stateForComponent(mainPanel)
+        );
+    }
 
-        if (isPreviewShown(project, scadFile)) {
-            attachHtmlPanel();
+    private void scheduleAttachHtmlPanel() {
+        mySwingAlarm.addRequest(
+                () -> attachHtmlPanel(),
+                0,
+                ModalityState.stateForComponent(getComponent())
+        );
+    }
+
+    private void ensurePreviewSite() {
+        if (previewSite == null) {
+            previewSite = OpenSCADPreviewSiteFactory.getInstance(project).createSite(scadFile);
         }
     }
 
-    public OpenSCADPreviewSite getPreviewSite() {
+    public @Nullable OpenSCADPreviewSite getPreviewSite() {
         return previewSite;
     }
 
     public VirtualFile getFile() {
-        return previewSite.htmlFile.getOriginalFile();
+        return previewSite != null ? previewSite.htmlFile.getOriginalFile() : scadFile;
     }
 
     public OpenSCADPreviewFileEditorConfiguration getEditorConfig() {
@@ -123,23 +141,40 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     }
 
     public Boolean isPreviewShown() {
-        return isPreviewShown(project, previewSite.previewFile);
+        return isPreviewShown(project, scadFile);
     }
 
     private void attachHtmlPanel() {
-        if (htmlPanel == null) {
-            htmlPanel = new JCEFHtmlPanel(true, null, previewSite.htmlFile.getPreviewUrl().toExternalForm());
-            final CefMessageRouter messageRouter = CefMessageRouter.create();
-            messageRouter.addHandler(new CefMessageRouterHandler(), true);
-            htmlPanel.getJBCefClient().getCefClient().addMessageRouter(messageRouter);
-            previewToolbar = createToolbar(htmlPanel.getComponent());
-            mainPanel.add(previewToolbar.getComponent(), BorderLayout.NORTH);
-            mainPanel.add(htmlPanel.getComponent(), BorderLayout.CENTER);
-            if (mainPanel.isShowing()) mainPanel.validate();
-            mainPanel.repaint();
-            htmlPanel.getCefBrowser().reload();
-            generatePreview();
+        if (htmlPanel != null) {
+            return;
         }
+        ensurePreviewSite();
+        if (previewSite == null) {
+            showPreviewError("Preview site could not be created. Check the IDE log for details.");
+            LOG.warn("OpenSCAD preview site was not created for " + scadFile.getPath());
+            return;
+        }
+        if (previewSite.htmlFile == null) {
+            showPreviewError("Preview HTML file could not be created. Check the IDE log for details.");
+            LOG.warn("OpenSCAD preview HTML file was not created for " + scadFile.getPath());
+            return;
+        }
+        htmlPanel = new JCEFHtmlPanel(true, null, previewSite.htmlFile.getPreviewUrl().toExternalForm());
+        final CefMessageRouter messageRouter = CefMessageRouter.create();
+        messageRouter.addHandler(new CefMessageRouterHandler(), true);
+        htmlPanel.getJBCefClient().getCefClient().addMessageRouter(messageRouter);
+        previewToolbar = createToolbar(htmlPanel.getComponent());
+        mainPanel.clearMessage();
+        mainPanel.add(previewToolbar.getComponent(), BorderLayout.NORTH);
+        mainPanel.add(htmlPanel.getComponent(), BorderLayout.CENTER);
+        if (mainPanel.isShowing()) mainPanel.validate();
+        mainPanel.repaint();
+        htmlPanel.getCefBrowser().reload();
+        generatePreview();
+    }
+
+    private void showPreviewError(@NotNull final String message) {
+        mainPanel.showMessage(message);
     }
 
     private void detachHtmlPanel() {
@@ -222,17 +257,45 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     @Override
     public void dispose() {
         detachHtmlPanel();
-        ApplicationManager.getApplication().runWriteAction(() -> {
+        final OpenSCADPreviewSite site = previewSite;
+        if (site == null) {
+            return;
+        }
+        ApplicationManager.getApplication().invokeLater(() -> WriteAction.run(() -> {
             try {
-                previewSite.previewFile.delete(this);
-                getFile().delete(this);
-            } catch (final IOException ioe) {
+                if (site.previewFile != null) {
+                    site.previewFile.delete(OpenSCADPreviewFileEditor.this);
+                }
+                if (site.htmlFile != null) {
+                    site.htmlFile.getOriginalFile().delete(OpenSCADPreviewFileEditor.this);
+                }
+            }
+            catch (final IOException ioe) {
                 LOG.warn("An error occurred while deleting temporary scad preview files.", ioe);
             }
-        });
+        }), ModalityState.nonModal());
     }
 
     private class MainPanel extends BorderLayoutPanel implements DataProvider {
+        private final JLabel messageLabel = new JLabel("Loading preview...", SwingConstants.CENTER);
+
+        MainPanel() {
+            add(messageLabel, BorderLayout.CENTER);
+        }
+
+        void showMessage(@NotNull final String message) {
+            messageLabel.setText("<html><center>" + message + "</center></html>");
+            if (messageLabel.getParent() == null) {
+                add(messageLabel, BorderLayout.CENTER);
+            }
+            revalidate();
+            repaint();
+        }
+
+        void clearMessage() {
+            remove(messageLabel);
+        }
+
         @Override
         public @Nullable Object getData(@NotNull @NonNls final String dataId) {
             if (OpenSCADDataKeys.PREVIEW_EDITOR.is(dataId))

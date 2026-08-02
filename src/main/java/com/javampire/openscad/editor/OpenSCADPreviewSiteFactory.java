@@ -4,7 +4,7 @@ import com.google.common.io.Resources;
 import com.intellij.ide.browsers.*;
 import com.intellij.ide.browsers.actions.WebPreviewVirtualFile;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.colors.EditorColorsManager;
@@ -55,16 +55,22 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
 
 
     public OpenSCADPreviewSite createSite(@NotNull final VirtualFile scadFile) {
-        final OpenSCADPreviewSite previewSite = new OpenSCADPreviewSite(scadFile);
-        createPreviewFile(previewSite);
-        createHTMLFile(previewSite);
-        Disposer.register(this, previewSite);
-        return previewSite;
+        return WriteAction.compute(() -> {
+            final OpenSCADPreviewSite previewSite = new OpenSCADPreviewSite(scadFile);
+            createPreviewFile(previewSite);
+            createHTMLFile(previewSite);
+            Disposer.register(this, previewSite);
+            return previewSite;
+        });
     }
 
     private @Nullable VirtualFile getHtmlDir() {
         if (htmlDir == null || !new File(htmlDir.getPath()).exists()) {
             final VirtualFile outputDir = getOutputDir();
+            if (outputDir == null) {
+                LOG.error("Can not initialize preview output directory for project " + project.getName());
+                return null;
+            }
 
             htmlDir = outputDir.findChild(HTML);
             if (htmlDir != null && !new File(htmlDir.getPath()).exists()) {
@@ -73,24 +79,24 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
             }
 
             if (htmlDir == null || !new File(htmlDir.getPath()).exists()) {
-                ApplicationManager.getApplication().runWriteAction(() -> {
-                    try {
-                        htmlDir = outputDir.createChildDirectory(getInstance(project), HTML);
-                    } catch (IOException ioe) {
-                        LOG.error("Can not initialize a temporary directory for scad file preview.", ioe);
-                        htmlDir = null;
-                        return;
-                    }
+                try {
+                    htmlDir = outputDir.createChildDirectory(getInstance(project), HTML);
+                }
+                catch (IOException ioe) {
+                    LOG.error("Can not initialize a temporary directory for scad file preview.", ioe);
+                    htmlDir = null;
+                    return null;
+                }
 
-                    // Copy html and JS resources
-                    final VirtualFile jarHtmlRoot = VfsUtil.findFileByURL(getClass().getResource("/html"));
-                    try {
-                        VfsUtil.copyDirectory(getInstance(project), jarHtmlRoot, htmlDir, null);
-                    } catch (final IOException ioe) {
-                        LOG.error("Can not create copy resource file for scad file preview.", ioe);
-                        htmlDir = null;
-                    }
-                });
+                // Copy html and JS resources
+                final VirtualFile jarHtmlRoot = VfsUtil.findFileByURL(getClass().getResource("/html"));
+                try {
+                    VfsUtil.copyDirectory(getInstance(project), jarHtmlRoot, htmlDir, null);
+                }
+                catch (final IOException ioe) {
+                    LOG.error("Can not create copy resource file for scad file preview.", ioe);
+                    htmlDir = null;
+                }
             }
         }
         return htmlDir;
@@ -104,19 +110,22 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
         }
 
         final String previewFileRelativeName = computeSiteFilesRelativeName(previewSite.scadFile) + ".stl";
-        ApplicationManager.getApplication().runWriteAction(() -> {
-            try {
-                previewSite.previewFile = getHtmlDir().findOrCreateChildData(this, previewFileRelativeName);
-            } catch (final IOException ioe) {
-                LOG.error("An error occurred while initializing preview file.", ioe);
-            }
-        });
+        try {
+            previewSite.previewFile = getHtmlDir().findOrCreateChildData(this, previewFileRelativeName);
+        }
+        catch (final IOException ioe) {
+            LOG.error("An error occurred while initializing preview file.", ioe);
+        }
     }
 
     private void createHTMLFile(@NotNull final OpenSCADPreviewSite previewSite) {
         VirtualFile htmlDirTmp = getHtmlDir();
         if (htmlDirTmp == null) {
             LOG.error("Can not create html file without an html output folder.");
+            return;
+        }
+        if (previewSite.previewFile == null) {
+            LOG.error("Can not create html file without a preview STL file.");
             return;
         }
 
@@ -126,24 +135,18 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
         if (htmlFileContent == null) {
             return;
         }
-        var refObject = new Object() {
-            VirtualFile htmlFile = null;
-        };
-        ApplicationManager.getApplication().runWriteAction(() -> {
-            try {
-                refObject.htmlFile = htmlDirTmp.findOrCreateChildData(this, htmlFileName);
-                refObject.htmlFile.setBinaryContent(htmlFileContent.getBytes(StandardCharsets.UTF_8));
-            } catch (IOException ioe) {
-                LOG.error("Can not modify index html file for scad file preview.", ioe);
-                refObject.htmlFile = null;
-            }
-        });
-        if (refObject.htmlFile == null) {
+        VirtualFile htmlFile;
+        try {
+            htmlFile = htmlDirTmp.findOrCreateChildData(this, htmlFileName);
+            htmlFile.setBinaryContent(htmlFileContent.getBytes(StandardCharsets.UTF_8));
+        }
+        catch (IOException ioe) {
+            LOG.error("Can not modify index html file for scad file preview.", ioe);
             return;
         }
 
         // Creating the WebPreviewVirtualFile from the html file
-        final PsiElement htmlPsiFile = PsiManager.getInstance(project).findFile(refObject.htmlFile);
+        final PsiElement htmlPsiFile = PsiManager.getInstance(project).findFile(htmlFile);
         if (htmlPsiFile == null) {
             LOG.error("Can not find html psi file.");
             return;
@@ -158,7 +161,7 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
                 Collection<Url> urls = WebBrowserService.getInstance().getUrlsToOpen(browserRequest, false);
                 if (!urls.isEmpty()) {
                     Url url = urls.iterator().next();
-                    previewSite.htmlFile = new WebPreviewVirtualFile(refObject.htmlFile, url);
+                    previewSite.htmlFile = new WebPreviewVirtualFile(htmlFile, url);
                 }
             } catch (final WebBrowserUrlProvider.BrowserException e) {
                 LOG.error("An error occurred while getting internal preview url.", e);
@@ -179,19 +182,29 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
         }
     }
 
-    private VirtualFile getOutputDir() {
+    private @Nullable VirtualFile getOutputDir() {
         // Basic case, using compiler output path
         final CompilerProjectExtension compilerProjectExtension = CompilerProjectExtension.getInstance(project);
         if (compilerProjectExtension != null) {
             VirtualFile compilerOutputVirtualFile = compilerProjectExtension.getCompilerOutput();
             if (compilerOutputVirtualFile == null) {
-                compilerOutputVirtualFile = createOutputDir(compilerProjectExtension.getCompilerOutputUrl());
+                final String compilerOutputUrl = compilerProjectExtension.getCompilerOutputUrl();
+                if (compilerOutputUrl != null) {
+                    compilerOutputVirtualFile = createOutputDir(compilerOutputUrl);
+                }
             }
-            return compilerOutputVirtualFile;
+            if (compilerOutputVirtualFile != null) {
+                return compilerOutputVirtualFile;
+            }
+        }
+
+        final Module[] modules = ModuleManager.getInstance(project).getModules();
+        if (modules.length == 0) {
+            return createOutputDirFromProjectBase();
         }
 
         // Current language probably does not have a compiler, getting an existing excluded temp folder
-        final Module module = ModuleManager.getInstance(project).getModules()[0];
+        final Module module = modules[0];
         final VirtualFile[] rootFiles = ModuleRootManager.getInstance(module).getExcludeRoots();
         if (rootFiles.length > 0) {
             return rootFiles[0];
@@ -204,30 +217,48 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
         }
 
         // Last resort, using custom folder
+        return createOutputDirFromProjectBase();
+    }
+
+    private @Nullable VirtualFile createOutputDirFromProjectBase() {
+        final String basePath = project.getBasePath();
+        if (basePath == null) {
+            return null;
+        }
         final String DEFAULT_OUTPUT_FOLDER = "out";
         VirtualFile customFolder = project.getWorkspaceFile().findChild(DEFAULT_OUTPUT_FOLDER);
         if (customFolder == null) {
-            customFolder = createOutputDir(project.getBasePath() + "/" + DEFAULT_OUTPUT_FOLDER);
+            customFolder = createOutputDir(basePath + "/" + DEFAULT_OUTPUT_FOLDER);
         }
         return customFolder;
     }
 
-    private VirtualFile createOutputDir(final String compilerOutputUrl) {
+    private @Nullable VirtualFile createOutputDir(@Nullable final String compilerOutputUrl) {
+        if (compilerOutputUrl == null) {
+            return null;
+        }
         final File compilerOutputFile = new File(FileUtil.toSystemDependentName(VfsUtilCore.urlToPath(compilerOutputUrl)));
         compilerOutputFile.mkdirs();
         return VirtualFileManager.getInstance().refreshAndFindFileByNioPath(compilerOutputFile.toPath());
     }
 
     private String computeSiteFilesRelativeName(@NotNull final VirtualFile scadFile) {
+        final VirtualFile moduleRoot = getModuleContentRoot(scadFile);
+        if (moduleRoot == null) {
+            return scadFile.getNameWithoutExtension();
+        }
         return scadFile.getPath()
                 .substring(0, scadFile.getPath().length() - 5)
-                .replace(getModuleContentRoot(scadFile).getPath(), "")
+                .replace(moduleRoot.getPath(), "")
                 .replaceAll("^[/\\\\]*", "")
                 .replaceAll("[ ./\\\\]", "_");
     }
 
-    private VirtualFile getModuleContentRoot(@NotNull final VirtualFile scadFile) {
+    private @Nullable VirtualFile getModuleContentRoot(@NotNull final VirtualFile scadFile) {
         final Module currentModule = FileIndexFacade.getInstance(project).getModuleForFile(scadFile);
+        if (currentModule == null) {
+            return null;
+        }
         VirtualFile moduleRoot = null;
         for (final VirtualFile rootVirtualFile : ModuleRootManager.getInstance(currentModule).getContentRoots()) {
             if (scadFile.getPath().contains(rootVirtualFile.getPath())) {
@@ -240,6 +271,9 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
 
     @Override
     public void dispose() {
+        if (htmlDir == null) {
+            return;
+        }
         try {
             FileUtils.deleteDirectory(new File(htmlDir.getPath()));
         } catch (final IOException ioe) {
