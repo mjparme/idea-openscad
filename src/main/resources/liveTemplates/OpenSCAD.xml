@@ -1,0 +1,49 @@
+<templateSet group="OpenSCAD">
+  <template name="d" value="difference() {&#10;    $SELECTION$&#10;}" description="Surround With Difference" toReformat="false" toShortenFQNames="true">
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+  <template name="ifo" value="if () {&#10;    $SELECTION$&#10;}" description="Surround With If" toReformat="false" toShortenFQNames="true">
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+  <template name="m" value="module $NAME$() {&#10;    $SELECTION$&#10;}" description="Surround With Module" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+  <template name="mir" value="mirror([0, 0, 0]) " description="Mirror" toReformat="false" toShortenFQNames="true">
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+  <template name="mod" value="module $NAME$() {&#10;&#10;}" description="Add module" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+  <template name="rot" value="rotate([0, 0, 0]) " description="Rotate" toReformat="false" toShortenFQNames="true">
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+  <template name="scl" value="scale([1, 1, 1]) " description="Scale" toReformat="false" toShortenFQNames="true">
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+  <template name="tran" value="translate([0, 0, 0]) " description="Translate" toReformat="false" toShortenFQNames="true">
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+  <template name="tranp" value="x = 0;&#10;y = 0;&#10;z = 0;&#10;translate([x, y, z])" description="Translate with position" toReformat="false" toShortenFQNames="true">
+    <context>
+      <option name="OPENSCAD" value="true"/>
+    </context>
+  </template>
+</templateSet>
