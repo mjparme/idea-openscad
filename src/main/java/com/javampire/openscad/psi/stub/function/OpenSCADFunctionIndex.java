@@ -33,7 +33,7 @@ public class OpenSCADFunctionIndex
     public Collection<OpenSCADFunctionDeclaration> get(@NotNull final String functionName,
                                                        @NotNull final Project project,
                                                        @NotNull final GlobalSearchScope scope) {
-        return StubIndex.getElements(getKey(), functionName, project, null, OpenSCADFunctionDeclaration.class);
+        return StubIndex.getElements(getKey(), functionName, project, scope, OpenSCADFunctionDeclaration.class);
     }
 
 }

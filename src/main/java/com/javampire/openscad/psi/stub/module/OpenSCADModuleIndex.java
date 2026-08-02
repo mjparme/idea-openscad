@@ -31,6 +31,6 @@ public class OpenSCADModuleIndex extends StringStubIndexExtension<OpenSCADModule
     public Collection<OpenSCADModuleDeclaration> get(@NotNull final String moduleName,
                                                      @NotNull final Project project,
                                                      @NotNull final GlobalSearchScope scope) {
-        return StubIndex.getElements(getKey(), moduleName, project, null, OpenSCADModuleDeclaration.class);
+        return StubIndex.getElements(getKey(), moduleName, project, scope, OpenSCADModuleDeclaration.class);
     }
 }
