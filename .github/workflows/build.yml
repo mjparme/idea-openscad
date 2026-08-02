@@ -57,7 +57,7 @@ jobs:
 
       # Cache Gradle dependencies
       - name: Setup Gradle Dependencies Cache
-        uses: actions/cache/save@v3.3.2
+        uses: actions/cache/save@v4
         with:
           path: |
             ~/.gradle/caches
@@ -84,7 +84,7 @@ jobs:
 
       # Cache Gradle Dependencies
       - name: Setup Gradle Dependencies Cache
-        uses: actions/cache/restore@v3.3.2
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.gradle/caches
@@ -115,7 +115,7 @@ jobs:
 
       # Cache Plugin distribution
       - name: Setup Plugin distribution Cache
-        uses: actions/cache/save@v3.3.2
+        uses: actions/cache/save@v4
         with:
           path: ./build/distributions
           key: ${{ runner.os }}-gradle-distribution-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
@@ -132,7 +132,7 @@ jobs:
 
       # Cache Plugin distribution
       - name: Setup Plugin distribution Cache
-        uses: actions/cache/restore@v3.3.2
+        uses: actions/cache/restore@v4
         with:
           path: ./build/distributions
           key: ${{ runner.os }}-gradle-distribution-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
