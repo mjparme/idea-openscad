@@ -91,10 +91,6 @@ public class OpenSCADVisitor extends PsiElementVisitor {
     visitExpr(o);
   }
 
-  public void visitEchoArgList(@NotNull OpenSCADEchoArgList o) {
-    visitPsiElement(o);
-  }
-
   public void visitEchoElement(@NotNull OpenSCADEchoElement o) {
     visitPsiElement(o);
   }

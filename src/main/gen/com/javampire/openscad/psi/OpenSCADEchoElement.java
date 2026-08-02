@@ -8,6 +8,6 @@ import com.intellij.psi.PsiElement;
 public interface OpenSCADEchoElement extends PsiElement {
 
   @NotNull
-  OpenSCADEchoArgList getEchoArgList();
+  OpenSCADArgAssignmentList getArgAssignmentList();
 
 }

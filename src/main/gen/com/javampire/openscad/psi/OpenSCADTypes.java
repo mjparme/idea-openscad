@@ -28,7 +28,6 @@ public interface OpenSCADTypes {
   IElementType DEBUG_OP = OpenSCADElementFactory.getElementType("DEBUG_OP");
   IElementType DISABLE_OP = OpenSCADElementFactory.getElementType("DISABLE_OP");
   IElementType DIV_EXPR = OpenSCADElementFactory.getElementType("DIV_EXPR");
-  IElementType ECHO_ARG_LIST = OpenSCADElementFactory.getElementType("ECHO_ARG_LIST");
   IElementType ECHO_ELEMENT = OpenSCADElementFactory.getElementType("ECHO_ELEMENT");
   IElementType ECHO_EXPR = OpenSCADElementFactory.getElementType("ECHO_EXPR");
   IElementType ELSE_ELEMENT = OpenSCADElementFactory.getElementType("ELSE_ELEMENT");
@@ -273,9 +272,6 @@ public interface OpenSCADTypes {
       }
       else if (type == DIV_EXPR) {
         return new OpenSCADDivExprImpl(node);
-      }
-      else if (type == ECHO_ARG_LIST) {
-        return new OpenSCADEchoArgListImpl(node);
       }
       else if (type == ECHO_ELEMENT) {
         return new OpenSCADEchoElementImpl(node);

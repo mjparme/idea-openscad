@@ -29,8 +29,8 @@ public class OpenSCADEchoElementImpl extends ASTWrapperPsiElement implements Ope
 
   @Override
   @NotNull
-  public OpenSCADEchoArgList getEchoArgList() {
-    return findNotNullChildByClass(OpenSCADEchoArgList.class);
+  public OpenSCADArgAssignmentList getArgAssignmentList() {
+    return findNotNullChildByClass(OpenSCADArgAssignmentList.class);
   }
 
 }
