@@ -20,6 +20,8 @@ public class OpenSCADSettingsConfigurable implements SearchableConfigurable.Pare
     private TextFieldWithBrowseButton openSCADExecutablePath;
     private JCheckBox allowPreviewEditor;
     private JLabel allowPreviewEditorText;
+    private JCheckBox fillNamedArgumentsOnModuleCompletion;
+    private JLabel fillNamedArgumentsOnModuleCompletionText;
 
     OpenSCADSettingsConfigurable(final Project project) {
         myProject = project;
@@ -70,6 +72,7 @@ public class OpenSCADSettingsConfigurable implements SearchableConfigurable.Pare
     public boolean isModified() {
         final OpenSCADSettings openSCADSettings = OpenSCADSettings.getInstance();
         return allowPreviewEditor.isSelected() != openSCADSettings.isAllowPreviewEditor()
+                || fillNamedArgumentsOnModuleCompletion.isSelected() != openSCADSettings.isFillNamedArgumentsOnModuleCompletion()
                 || !openSCADExecutablePath.getText().equals(openSCADSettings.getOpenSCADExecutable());
     }
 
@@ -78,6 +81,7 @@ public class OpenSCADSettingsConfigurable implements SearchableConfigurable.Pare
         final OpenSCADSettings openSCADSettings = OpenSCADSettings.getInstance();
         openSCADSettings.setOpenSCADExecutable(openSCADExecutablePath.getText());
         openSCADSettings.setAllowPreviewEditor(allowPreviewEditor.isSelected());
+        openSCADSettings.setFillNamedArgumentsOnModuleCompletion(fillNamedArgumentsOnModuleCompletion.isSelected());
         OpenSCADInfo.reset();
         if (openSCADSettings.hasExecutable()) {
             OpenSCADSettingsStartupActivity.updateOpenSCADLibraries(myProject);
@@ -90,6 +94,7 @@ public class OpenSCADSettingsConfigurable implements SearchableConfigurable.Pare
         final String openSCADExecutable = openSCADSettings.getOpenSCADExecutable();
         openSCADExecutablePath.setText(openSCADExecutable != null ? openSCADExecutable : "");
         allowPreviewEditor.setSelected(openSCADSettings.isAllowPreviewEditor());
+        fillNamedArgumentsOnModuleCompletion.setSelected(openSCADSettings.isFillNamedArgumentsOnModuleCompletion());
     }
 
     private void createUIComponents() {
