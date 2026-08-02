@@ -14,12 +14,17 @@ import com.intellij.util.PlatformIcons;
 import com.javampire.openscad.OpenSCADIcons;
 import com.javampire.openscad.parser.OpenSCADParserTokenSets;
 import com.javampire.openscad.psi.stub.variable.OpenSCADVariableStubElementType;
+import com.intellij.psi.PsiFile;
+import com.javampire.openscad.psi.stub.function.OpenSCADFunctionStubElementType;
+import com.javampire.openscad.psi.stub.module.OpenSCADModuleStubElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static com.javampire.openscad.parser.OpenSCADParserTokenSets.DOC_IN_PARENT;
@@ -208,6 +213,108 @@ public class OpenSCADPsiImplUtil {
         }
 
         return variableDeclarationsInParent;
+    }
+
+    public static List<OpenSCADModuleDeclaration> getFileModuleDeclarations(@NotNull final PsiFile file) {
+        return PsiTreeUtil.getChildrenOfTypeAsList(file, OpenSCADModuleDeclaration.class);
+    }
+
+    public static List<OpenSCADFunctionDeclaration> getFileFunctionDeclarations(@NotNull final PsiFile file) {
+        return PsiTreeUtil.getChildrenOfTypeAsList(file, OpenSCADFunctionDeclaration.class);
+    }
+
+    public static List<OpenSCADModuleDeclaration> getAccessibleModuleDeclarations(@NotNull final PsiElement element) {
+        final Set<OpenSCADModuleDeclaration> result = new LinkedHashSet<>();
+        addFileLevelModuleDeclarations(element, result);
+        OpenSCADModuleDeclaration enclosingModule = PsiTreeUtil.getParentOfType(element, OpenSCADModuleDeclaration.class);
+        while (enclosingModule != null) {
+            final PsiElement body = getModuleBodyContainer(enclosingModule);
+            if (body != null) {
+                collectModuleDeclarationsInContainer(body, result);
+            }
+            enclosingModule = PsiTreeUtil.getParentOfType(enclosingModule.getParent(), OpenSCADModuleDeclaration.class);
+        }
+        return new ArrayList<>(result);
+    }
+
+    public static List<OpenSCADFunctionDeclaration> getAccessibleFunctionDeclarations(@NotNull final PsiElement element) {
+        final Set<OpenSCADFunctionDeclaration> result = new LinkedHashSet<>();
+        addFileLevelFunctionDeclarations(element, result);
+        OpenSCADModuleDeclaration enclosingModule = PsiTreeUtil.getParentOfType(element, OpenSCADModuleDeclaration.class);
+        while (enclosingModule != null) {
+            final PsiElement body = getModuleBodyContainer(enclosingModule);
+            if (body != null) {
+                collectFunctionDeclarationsInContainer(body, result);
+            }
+            enclosingModule = PsiTreeUtil.getParentOfType(enclosingModule.getParent(), OpenSCADModuleDeclaration.class);
+        }
+        return new ArrayList<>(result);
+    }
+
+    private static @Nullable PsiElement getModuleBodyContainer(@NotNull final OpenSCADModuleDeclaration module) {
+        final OpenSCADArgDeclarationList args = module.getArgDeclarationList();
+        if (args == null) {
+            return null;
+        }
+        PsiElement statement = PsiTreeUtil.skipWhitespacesAndCommentsForward(args);
+        return statement;
+    }
+
+    private static void addFileLevelModuleDeclarations(@NotNull final PsiElement element,
+                                                       @NotNull final Set<OpenSCADModuleDeclaration> result) {
+        final PsiFile file = element.getContainingFile();
+        if (file == null) {
+            return;
+        }
+        for (final PsiElement child : file.getChildren()) {
+            if (child instanceof OpenSCADModuleDeclaration moduleDeclaration
+                    && !PsiTreeUtil.isAncestor(moduleDeclaration, element, false)) {
+                result.add(moduleDeclaration);
+            }
+        }
+    }
+
+    private static void addFileLevelFunctionDeclarations(@NotNull final PsiElement element,
+                                                         @NotNull final Set<OpenSCADFunctionDeclaration> result) {
+        final PsiFile file = element.getContainingFile();
+        if (file == null) {
+            return;
+        }
+        for (final PsiElement child : file.getChildren()) {
+            if (child instanceof OpenSCADFunctionDeclaration functionDeclaration
+                    && !PsiTreeUtil.isAncestor(functionDeclaration, element, false)) {
+                result.add(functionDeclaration);
+            }
+        }
+    }
+
+    private static void collectModuleDeclarationsInContainer(@NotNull final PsiElement container,
+                                                           @NotNull final Set<OpenSCADModuleDeclaration> result) {
+        for (PsiElement child = container.getFirstChild(); child != null; child = child.getNextSibling()) {
+            if (child instanceof OpenSCADModuleDeclaration moduleDeclaration) {
+                result.add(moduleDeclaration);
+            }
+            else if (!isModuleOrFunctionDeclaration(child)) {
+                collectModuleDeclarationsInContainer(child, result);
+            }
+        }
+    }
+
+    private static void collectFunctionDeclarationsInContainer(@NotNull final PsiElement container,
+                                                             @NotNull final Set<OpenSCADFunctionDeclaration> result) {
+        for (PsiElement child = container.getFirstChild(); child != null; child = child.getNextSibling()) {
+            if (child instanceof OpenSCADFunctionDeclaration functionDeclaration) {
+                result.add(functionDeclaration);
+            }
+            else if (!isModuleOrFunctionDeclaration(child)) {
+                collectFunctionDeclarationsInContainer(child, result);
+            }
+        }
+    }
+
+    private static boolean isModuleOrFunctionDeclaration(@NotNull final PsiElement element) {
+        final IElementType type = element.getNode().getElementType();
+        return type == OpenSCADModuleStubElementType.INSTANCE || type == OpenSCADFunctionStubElementType.INSTANCE;
     }
 
     private static void collectVariableDeclarations(@NotNull PsiElement element,
