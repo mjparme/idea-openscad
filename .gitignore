@@ -14,3 +14,4 @@ out
 node_modules/
 /src/main/generated-resources/
 package-lock.json
+reference.md

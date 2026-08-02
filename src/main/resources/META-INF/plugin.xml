@@ -40,6 +40,13 @@
         <fileEditorProvider implementation="com.javampire.openscad.editor.OpenSCADTextEditorWithPreviewProvider"/>
         <lang.syntaxHighlighterFactory language="OpenSCAD" implementationClass="com.javampire.openscad.highlighting.OpenSCADSyntaxHighlighterFactory"/>
         <annotator language="OpenSCAD" implementationClass="com.javampire.openscad.highlighting.OpenSCADAnnotator"/>
+        <localInspection language="OpenSCAD"
+                         shortName="OpenSCADUnresolvedReference"
+                         displayName="Unresolved reference"
+                         groupName="OpenSCAD"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         implementationClass="com.javampire.openscad.inspections.OpenSCADUnresolvedReferenceInspection"/>
         <codeStyleSettingsProvider implementation="com.javampire.openscad.formatter.OpenSCADCodeStyleSettingsProvider"/>
         <langCodeStyleSettingsProvider implementation="com.javampire.openscad.formatter.OpenSCADLanguageCodeStyleSettingsProvider"/>
         <colorSettingsPage implementation="com.javampire.openscad.highlighting.OpenSCADColorSettingsPage"/>
