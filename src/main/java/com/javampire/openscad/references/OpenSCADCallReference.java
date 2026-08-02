@@ -6,6 +6,8 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.IncorrectOperationException;
+import com.javampire.openscad.psi.OpenSCADFunctionDeclaration;
+import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
 import com.javampire.openscad.psi.OpenSCADNamedElement;
 import com.javampire.openscad.psi.OpenSCADResolvableElement;
 import com.javampire.openscad.psi.OpenSCADVariableDeclaration;
@@ -43,10 +45,10 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
             return resolveVariableReferences();
         }
         if (myElement instanceof OpenSCADModuleObjNameRef || myElement instanceof OpenSCADModuleOpNameRef) {
-            return resolveIndexedReferences(OpenSCADModuleIndex.getInstance());
+            return resolveScopedModuleReferences();
         }
         if (myElement instanceof OpenSCADFunctionNameRef) {
-            return resolveIndexedReferences(OpenSCADFunctionIndex.getInstance());
+            return resolveScopedFunctionReferences();
         }
         Project project = myElement.getProject();
         final OpenSCADReferenceResolver resolver = myElement.getReferenceResolver();
@@ -94,6 +96,45 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
             results.add(new PsiElementResolveResult(calledElement));
         }
         return results.toArray(ResolveResult.EMPTY_ARRAY);
+    }
+
+    @NotNull
+    private ResolveResult[] resolveScopedModuleReferences() {
+        final List<OpenSCADModuleDeclaration> accessibleDeclarations =
+                OpenSCADPsiImplUtil.getAccessibleModuleDeclarations(myElement);
+        final ResolveResult[] scopedResults = toScopedResults(accessibleDeclarations);
+        if (scopedResults.length > 0) {
+            return scopedResults;
+        }
+        return resolveIndexedReferences(OpenSCADModuleIndex.getInstance());
+    }
+
+    @NotNull
+    private ResolveResult[] resolveScopedFunctionReferences() {
+        final List<OpenSCADFunctionDeclaration> accessibleDeclarations =
+                OpenSCADPsiImplUtil.getAccessibleFunctionDeclarations(myElement);
+        final ResolveResult[] scopedResults = toScopedResults(accessibleDeclarations);
+        if (scopedResults.length > 0) {
+            return scopedResults;
+        }
+        return resolveIndexedReferences(OpenSCADFunctionIndex.getInstance());
+    }
+
+    @NotNull
+    private ResolveResult[] toScopedResults(@NotNull final List<? extends OpenSCADNamedElement> accessibleDeclarations) {
+        final List<ResolveResult> scopedResults = new ArrayList<>();
+        for (OpenSCADNamedElement declaration : accessibleDeclarations) {
+            if (referencedName.equals(declaration.getName())) {
+                scopedResults.add(new PsiElementResolveResult(declaration));
+            }
+        }
+        if (scopedResults.isEmpty()) {
+            return ResolveResult.EMPTY_ARRAY;
+        }
+        if (scopedResults.size() == 1) {
+            return scopedResults.toArray(ResolveResult.EMPTY_ARRAY);
+        }
+        return new ResolveResult[]{scopedResults.get(scopedResults.size() - 1)};
     }
 
     @NotNull

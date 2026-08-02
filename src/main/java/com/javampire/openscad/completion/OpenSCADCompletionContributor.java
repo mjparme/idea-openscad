@@ -241,7 +241,9 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
      * @return List of modules.
      */
     private List<LookupElement> getModules(final PsiElement element, final String tailText) {
-        final List<OpenSCADModuleDeclaration> moduleDeclarations = PsiTreeUtil.getChildrenOfTypeAsList(element.getContainingFile(), OpenSCADModuleDeclaration.class);
+        final List<OpenSCADModuleDeclaration> moduleDeclarations = element instanceof PsiFile file
+                ? OpenSCADPsiImplUtil.getFileModuleDeclarations(file)
+                : OpenSCADPsiImplUtil.getAccessibleModuleDeclarations(element);
         return convertToLookupElements(moduleDeclarations, tailText);
     }
 
@@ -264,7 +266,9 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
      * @return List of functions.
      */
     private List<LookupElement> getFunctions(final PsiElement element, final String tailText) {
-        final List<OpenSCADFunctionDeclaration> functionDeclarations = PsiTreeUtil.getChildrenOfTypeAsList(element.getContainingFile(), OpenSCADFunctionDeclaration.class);
+        final List<OpenSCADFunctionDeclaration> functionDeclarations = element instanceof PsiFile file
+                ? OpenSCADPsiImplUtil.getFileFunctionDeclarations(file)
+                : OpenSCADPsiImplUtil.getAccessibleFunctionDeclarations(element);
         return convertToLookupElements(functionDeclarations, tailText);
     }
 
@@ -401,7 +405,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     }
 
     private <T extends PsiElement> List<LookupElement> convertToLookupElements(final List<T> elements, final String tailText) {
-        return elements.parallelStream()
+        return elements.stream()
                 .map(OpenSCADPsiImplUtil::getPresentation)
                 .map(presentation -> {
                     final String text = presentation.getPresentableText();
