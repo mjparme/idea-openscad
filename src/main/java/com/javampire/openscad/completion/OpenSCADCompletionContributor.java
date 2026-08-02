@@ -100,6 +100,10 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                         addAccessibleArgumentDeclarations(result, elementPosition);
                         ProgressManager.checkCanceled();
 
+                        // Add callee parameters when completing named call arguments
+                        addCalleeArgumentDeclarations(result, elementPosition);
+                        ProgressManager.checkCanceled();
+
                         // Add all accessible variables in includes
                         addIncludesAccessibleVariables(result, elementPosition);
                         ProgressManager.checkCanceled();
@@ -154,15 +158,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
      * @param element Psi element.
      */
     private void addAccessibleArgumentDeclarations(final CompletionResultSet result, final PsiElement element) {
-        // Parents with ARG_DECLARATION_LIST : modules and functions
-        final List<PsiElement> argDeclarationParents = OpenSCADPsiImplUtil.getParentsOfType(element, WITH_ARG_DECLARATION_LIST);
-        final List<OpenSCADArgDeclaration> argDeclarations = argDeclarationParents.stream()
-                .map(e -> PsiTreeUtil.getChildOfType(e, OpenSCADArgDeclarationList.class))
-                .filter(Objects::nonNull)
-                .flatMap(e -> PsiTreeUtil.getChildrenOfTypeAsList(e, OpenSCADArgDeclaration.class).stream())
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-        result.addAllElements(convertToLookupElements(argDeclarations, null));
+        result.addAllElements(convertToLookupElements(OpenSCADPsiImplUtil.getAccessibleArgumentDeclarations(element), null));
 
         // Parents with FULL_ARG_DECLARATION_LIST : for loop
         final List<PsiElement> fullArgDeclarationParents = OpenSCADPsiImplUtil.getParentsOfType(element, WITH_FULL_ARG_DECLARATION_LIST);
@@ -187,6 +183,14 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                 .flatMap(Arrays::stream)
                 .collect(Collectors.toList());
         result.addAllElements(convertToLookupElements(letFullArgDeclaration, null));
+    }
+
+    private void addCalleeArgumentDeclarations(final CompletionResultSet result, final PsiElement element) {
+        final OpenSCADArgAssignmentList argList = PsiTreeUtil.getParentOfType(element, OpenSCADArgAssignmentList.class);
+        if (argList == null) {
+            return;
+        }
+        result.addAllElements(convertToLookupElements(OpenSCADPsiImplUtil.getCalleeArgumentDeclarations(argList), null));
     }
 
     /**

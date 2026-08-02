@@ -17,6 +17,7 @@ import com.javampire.openscad.psi.stub.variable.OpenSCADVariableStubElementType;
 import com.intellij.psi.PsiFile;
 import com.javampire.openscad.psi.stub.function.OpenSCADFunctionStubElementType;
 import com.javampire.openscad.psi.stub.module.OpenSCADModuleStubElementType;
+import com.javampire.openscad.references.OpenSCADParameterCallReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -95,7 +96,9 @@ public class OpenSCADPsiImplUtil {
     }
 
     public static PsiReference getReference(PsiElement element) {
-        // TODO: implement parameter references
+        if (element instanceof OpenSCADParameterReference parameterReference) {
+            return new OpenSCADParameterCallReference(parameterReference);
+        }
         LOG.debug("Unhandled reference element: " + element);
         return null;
     }
@@ -213,6 +216,80 @@ public class OpenSCADPsiImplUtil {
         }
 
         return variableDeclarationsInParent;
+    }
+
+    /**
+     * Returns parameter declarations from enclosing module and function declarations.
+     */
+    public static List<OpenSCADArgDeclaration> getAccessibleArgumentDeclarations(@NotNull final PsiElement element) {
+        final List<OpenSCADArgDeclaration> result = new ArrayList<>();
+        for (final PsiElement parent : getParentsOfType(element, OpenSCADParserTokenSets.WITH_ARG_DECLARATION_LIST)) {
+            final OpenSCADArgDeclarationList argList = PsiTreeUtil.getChildOfType(parent, OpenSCADArgDeclarationList.class);
+            if (argList != null) {
+                result.addAll(PsiTreeUtil.getChildrenOfTypeAsList(argList, OpenSCADArgDeclaration.class));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Returns parameter declarations for the callee associated with a call-site argument list.
+     */
+    public static List<OpenSCADArgDeclaration> getCalleeArgumentDeclarations(@NotNull final OpenSCADParameterReference parameterReference) {
+        final OpenSCADArgAssignmentList argList = PsiTreeUtil.getParentOfType(parameterReference, OpenSCADArgAssignmentList.class);
+        if (argList == null) {
+            return List.of();
+        }
+        return getCalleeArgumentDeclarations(argList);
+    }
+
+    public static List<OpenSCADArgDeclaration> getCalleeArgumentDeclarations(@NotNull final OpenSCADArgAssignmentList argList) {
+        final OpenSCADResolvableElement callTarget = getCallTarget(argList);
+        if (callTarget == null) {
+            return List.of();
+        }
+        final PsiReference reference = callTarget.getReference();
+        if (reference == null) {
+            return List.of();
+        }
+        final PsiElement resolved = reference.resolve();
+        if (resolved instanceof OpenSCADModuleDeclaration moduleDeclaration) {
+            return getDeclarationArgumentList(moduleDeclaration.getArgDeclarationList());
+        }
+        if (resolved instanceof OpenSCADFunctionDeclaration functionDeclaration) {
+            return getDeclarationArgumentList(functionDeclaration.getArgDeclarationList());
+        }
+        return List.of();
+    }
+
+    @Nullable
+    public static OpenSCADResolvableElement getCallTarget(@NotNull final OpenSCADArgAssignmentList argList) {
+        final PsiElement parent = argList.getParent();
+        if (parent instanceof OpenSCADModuleCallObj moduleCallObj) {
+            return moduleCallObj.getModuleObjNameRef();
+        }
+        if (parent instanceof OpenSCADModuleCallOp moduleCallOp) {
+            return moduleCallOp.getModuleOpNameRef();
+        }
+        if (parent instanceof OpenSCADFunctionCallExpr functionCallExpr) {
+            return functionCallExpr.getFunctionNameRef();
+        }
+        if (parent instanceof OpenSCADBuiltinObj builtinObj) {
+            final OpenSCADBuiltinObjRef builtinObjRef = builtinObj.getBuiltinObjRef();
+            return builtinObjRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
+        }
+        if (parent instanceof OpenSCADBuiltinOp builtinOp) {
+            final OpenSCADCommonOpRef commonOpRef = builtinOp.getCommonOpRef();
+            return commonOpRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
+        }
+        return null;
+    }
+
+    private static List<OpenSCADArgDeclaration> getDeclarationArgumentList(@Nullable final OpenSCADArgDeclarationList argList) {
+        if (argList == null) {
+            return List.of();
+        }
+        return PsiTreeUtil.getChildrenOfTypeAsList(argList, OpenSCADArgDeclaration.class);
     }
 
     public static List<OpenSCADModuleDeclaration> getFileModuleDeclarations(@NotNull final PsiFile file) {
@@ -342,7 +419,8 @@ public class OpenSCADPsiImplUtil {
             element = element.getParent();
         }
         while (element != null) {
-            if (elementTypes.contains(element.getNode().getElementType())) {
+            final ASTNode node = element.getNode();
+            if (node != null && elementTypes.contains(node.getElementType())) {
                 matchingParents.add(element);
             }
             element = element.getParent();
