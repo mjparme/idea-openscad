@@ -16,7 +16,11 @@ public class BuiltinContributor extends IndexableSetContributor {
     @Override
     public Set<VirtualFile> getAdditionalRootsToIndex() {
         final HashSet<VirtualFile> result = new HashSet<>();
-        for (final String fileName : Arrays.asList("builtin_functions.scad", "builtin_modules.scad")) {
+        for (final String fileName : Arrays.asList(
+                "builtin_functions.scad",
+                "builtin_modules.scad",
+                "builtin_special_variables.scad"
+        )) {
             final URL builtinFileUrl = this.getClass().getResource(
                     "/com/javampire/openscad/skeletons/" + fileName
             );
