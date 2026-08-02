@@ -50,6 +50,15 @@ public class OpenSCADAnnotatorTest extends BasePlatformTestCase {
         assertHighlightKey("y", OpenSCADSyntaxHighlighter.PARAMETER_NAME, highlights, 2);
     }
 
+    public void testBuiltinModuleParametersUseParameterColor() {
+        myFixture.configureByText("test.scad", "cube(size = [1, 1, 1], center = true);");
+
+        final List<HighlightInfo> highlights = myFixture.doHighlighting();
+
+        assertHighlightKey("size", OpenSCADSyntaxHighlighter.PARAMETER_NAME, highlights, 1);
+        assertHighlightKey("center", OpenSCADSyntaxHighlighter.PARAMETER_NAME, highlights, 1);
+    }
+
     private static void assertHighlightKey(String text,
                                            TextAttributesKey expectedKey,
                                            List<HighlightInfo> highlights,

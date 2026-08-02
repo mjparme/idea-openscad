@@ -187,6 +187,24 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         }
     }
 
+    public void testBuiltinCubeWithArgsUsesPositionalFirstParameter() {
+        myFixture.configureByText("test.scad", "<caret>");
+        final LookupElement cubeWithArgs = findLookupItemWithFilledArgs("cube");
+        assertNotNull(cubeWithArgs);
+        selectLookupItem(cubeWithArgs);
+        myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
+        myFixture.checkResult("cube([1, 1, 1], center = false)");
+    }
+
+    public void testBuiltinLinearExtrudeWithArgsUsesNamedParameters() {
+        myFixture.configureByText("test.scad", "<caret>");
+        final LookupElement linearExtrudeWithArgs = findLookupItemWithFilledArgs("linear_extrude");
+        assertNotNull(linearExtrudeWithArgs);
+        selectLookupItem(linearExtrudeWithArgs);
+        myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
+        myFixture.checkResult("linear_extrude(height = fanwidth, center = true, convexity = 10, twist = -fanrot, slices = 20, scale = 1.0)");
+    }
+
     private void selectLookupItem(LookupElement item) {
         final var lookup = myFixture.getLookup();
         assertNotNull(lookup);

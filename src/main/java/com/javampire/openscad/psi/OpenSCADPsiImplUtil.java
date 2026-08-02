@@ -1,10 +1,13 @@
 package com.javampire.openscad.psi;
 
+import static com.javampire.openscad.parser.OpenSCADParserTokenSets.DOC_IN_PARENT;
+
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.lang.ASTNode;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
@@ -13,22 +16,19 @@ import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.PlatformIcons;
 import com.javampire.openscad.OpenSCADIcons;
 import com.javampire.openscad.parser.OpenSCADParserTokenSets;
-import com.javampire.openscad.psi.stub.variable.OpenSCADVariableStubElementType;
-import com.intellij.psi.PsiFile;
 import com.javampire.openscad.psi.stub.function.OpenSCADFunctionStubElementType;
 import com.javampire.openscad.psi.stub.module.OpenSCADModuleStubElementType;
+import com.javampire.openscad.psi.stub.variable.OpenSCADVariableStubElementType;
 import com.javampire.openscad.references.OpenSCADParameterCallReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
-
-import static com.javampire.openscad.parser.OpenSCADParserTokenSets.DOC_IN_PARENT;
+import javax.swing.*;
 
 public class OpenSCADPsiImplUtil {
 
@@ -229,6 +229,7 @@ public class OpenSCADPsiImplUtil {
                 result.addAll(PsiTreeUtil.getChildrenOfTypeAsList(argList, OpenSCADArgDeclaration.class));
             }
         }
+
         return result;
     }
 
@@ -240,6 +241,7 @@ public class OpenSCADPsiImplUtil {
         if (argList == null) {
             return List.of();
         }
+
         return getCalleeArgumentDeclarations(argList);
     }
 
@@ -338,52 +340,50 @@ public class OpenSCADPsiImplUtil {
     }
 
     private static void addFileLevelModuleDeclarations(@NotNull final PsiElement element,
-                                                       @NotNull final Set<OpenSCADModuleDeclaration> result) {
+        @NotNull final Set<OpenSCADModuleDeclaration> result) {
         final PsiFile file = element.getContainingFile();
         if (file == null) {
             return;
         }
         for (final PsiElement child : file.getChildren()) {
             if (child instanceof OpenSCADModuleDeclaration moduleDeclaration
-                    && !PsiTreeUtil.isAncestor(moduleDeclaration, element, false)) {
+                && !PsiTreeUtil.isAncestor(moduleDeclaration, element, false)) {
                 result.add(moduleDeclaration);
             }
         }
     }
 
     private static void addFileLevelFunctionDeclarations(@NotNull final PsiElement element,
-                                                         @NotNull final Set<OpenSCADFunctionDeclaration> result) {
+        @NotNull final Set<OpenSCADFunctionDeclaration> result) {
         final PsiFile file = element.getContainingFile();
         if (file == null) {
             return;
         }
         for (final PsiElement child : file.getChildren()) {
             if (child instanceof OpenSCADFunctionDeclaration functionDeclaration
-                    && !PsiTreeUtil.isAncestor(functionDeclaration, element, false)) {
+                && !PsiTreeUtil.isAncestor(functionDeclaration, element, false)) {
                 result.add(functionDeclaration);
             }
         }
     }
 
     private static void collectModuleDeclarationsInContainer(@NotNull final PsiElement container,
-                                                           @NotNull final Set<OpenSCADModuleDeclaration> result) {
+        @NotNull final Set<OpenSCADModuleDeclaration> result) {
         for (PsiElement child = container.getFirstChild(); child != null; child = child.getNextSibling()) {
             if (child instanceof OpenSCADModuleDeclaration moduleDeclaration) {
                 result.add(moduleDeclaration);
-            }
-            else if (!isModuleOrFunctionDeclaration(child)) {
+            } else if (!isModuleOrFunctionDeclaration(child)) {
                 collectModuleDeclarationsInContainer(child, result);
             }
         }
     }
 
     private static void collectFunctionDeclarationsInContainer(@NotNull final PsiElement container,
-                                                             @NotNull final Set<OpenSCADFunctionDeclaration> result) {
+        @NotNull final Set<OpenSCADFunctionDeclaration> result) {
         for (PsiElement child = container.getFirstChild(); child != null; child = child.getNextSibling()) {
             if (child instanceof OpenSCADFunctionDeclaration functionDeclaration) {
                 result.add(functionDeclaration);
-            }
-            else if (!isModuleOrFunctionDeclaration(child)) {
+            } else if (!isModuleOrFunctionDeclaration(child)) {
                 collectFunctionDeclarationsInContainer(child, result);
             }
         }
@@ -395,7 +395,7 @@ public class OpenSCADPsiImplUtil {
     }
 
     private static void collectVariableDeclarations(@NotNull PsiElement element,
-                                                    @NotNull List<OpenSCADVariableDeclaration> result) {
+        @NotNull List<OpenSCADVariableDeclaration> result) {
         if (element.getNode().getElementType() == OpenSCADVariableStubElementType.INSTANCE) {
             result.add((OpenSCADVariableDeclaration) element);
         } else {
@@ -409,7 +409,7 @@ public class OpenSCADPsiImplUtil {
     /**
      * Recursively get all parents of types elementTypes.
      *
-     * @param element      Element for which matching parents will be returned.
+     * @param element Element for which matching parents will be returned.
      * @param elementTypes Allowed parent types.
      * @return List of matching parents.
      */
