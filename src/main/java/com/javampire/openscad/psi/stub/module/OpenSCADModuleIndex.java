@@ -28,9 +28,7 @@ public class OpenSCADModuleIndex extends StringStubIndexExtension<OpenSCADModule
     }
 
     @Override
-    public Collection<OpenSCADModuleDeclaration> get(@NotNull final String moduleName,
-                                                     @NotNull final Project project,
-                                                     @NotNull final GlobalSearchScope scope) {
-        return StubIndex.getElements(getKey(), moduleName, project, scope, OpenSCADModuleDeclaration.class);
+    public Collection<OpenSCADModuleDeclaration> get(@NotNull final String moduleName, @NotNull final Project project, @NotNull final GlobalSearchScope scope) {
+        return StubIndex.getElements(MODULE, moduleName, project, scope, OpenSCADModuleDeclaration.class);
     }
 }
