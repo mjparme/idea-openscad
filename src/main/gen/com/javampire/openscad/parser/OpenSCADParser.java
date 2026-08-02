@@ -588,98 +588,13 @@ public class OpenSCADParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // LPARENTH ((IDENTIFIER EQUALS expr) | expr | IDENTIFIER | STRING_LITERAL) (COMMA ((IDENTIFIER EQUALS expr) | expr | IDENTIFIER |  STRING_LITERAL))* RPARENTH
-  public static boolean echo_arg_list(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "echo_arg_list")) return false;
-    if (!nextTokenIs(b, LPARENTH)) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeToken(b, LPARENTH);
-    r = r && echo_arg_list_1(b, l + 1);
-    r = r && echo_arg_list_2(b, l + 1);
-    r = r && consumeToken(b, RPARENTH);
-    exit_section_(b, m, ECHO_ARG_LIST, r);
-    return r;
-  }
-
-  // (IDENTIFIER EQUALS expr) | expr | IDENTIFIER | STRING_LITERAL
-  private static boolean echo_arg_list_1(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "echo_arg_list_1")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = echo_arg_list_1_0(b, l + 1);
-    if (!r) r = expr(b, l + 1, -1);
-    if (!r) r = consumeToken(b, IDENTIFIER);
-    if (!r) r = consumeToken(b, STRING_LITERAL);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  // IDENTIFIER EQUALS expr
-  private static boolean echo_arg_list_1_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "echo_arg_list_1_0")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeTokens(b, 0, IDENTIFIER, EQUALS);
-    r = r && expr(b, l + 1, -1);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  // (COMMA ((IDENTIFIER EQUALS expr) | expr | IDENTIFIER |  STRING_LITERAL))*
-  private static boolean echo_arg_list_2(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "echo_arg_list_2")) return false;
-    while (true) {
-      int c = current_position_(b);
-      if (!echo_arg_list_2_0(b, l + 1)) break;
-      if (!empty_element_parsed_guard_(b, "echo_arg_list_2", c)) break;
-    }
-    return true;
-  }
-
-  // COMMA ((IDENTIFIER EQUALS expr) | expr | IDENTIFIER |  STRING_LITERAL)
-  private static boolean echo_arg_list_2_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "echo_arg_list_2_0")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeToken(b, COMMA);
-    r = r && echo_arg_list_2_0_1(b, l + 1);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  // (IDENTIFIER EQUALS expr) | expr | IDENTIFIER |  STRING_LITERAL
-  private static boolean echo_arg_list_2_0_1(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "echo_arg_list_2_0_1")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = echo_arg_list_2_0_1_0(b, l + 1);
-    if (!r) r = expr(b, l + 1, -1);
-    if (!r) r = consumeToken(b, IDENTIFIER);
-    if (!r) r = consumeToken(b, STRING_LITERAL);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  // IDENTIFIER EQUALS expr
-  private static boolean echo_arg_list_2_0_1_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "echo_arg_list_2_0_1_0")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeTokens(b, 0, IDENTIFIER, EQUALS);
-    r = r && expr(b, l + 1, -1);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  /* ********************************************************** */
-  // "echo" echo_arg_list
+  // "echo" arg_assignment_list
   public static boolean echo_element(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "echo_element")) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, ECHO_ELEMENT, "<echo element>");
     r = consumeToken(b, "echo");
-    r = r && echo_arg_list(b, l + 1);
+    r = r && arg_assignment_list(b, l + 1);
     exit_section_(b, l, m, r, false, null);
     return r;
   }
