@@ -2,6 +2,8 @@ package com.javampire.openscad.refactoring;
 
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiNameIdentifierOwner;
+import com.intellij.psi.PsiReference;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.javampire.openscad.parser.OpenSCADParserTokenSets;
 import com.javampire.openscad.psi.*;
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +28,36 @@ public final class OpenSCADRenameUtil {
                 || element instanceof OpenSCADFullArgDeclaration
                 || element instanceof OpenSCADResolvableElement
                 || element instanceof OpenSCADParameterReference;
+    }
+
+    /**
+     * Returns the element that should be renamed for refactorings invoked on {@code element},
+     * e.g. the module declaration when the caret is on the identifier in {@code module foo()}.
+     */
+    @Nullable
+    public static PsiElement getRenamableElement(@Nullable PsiElement element) {
+        if (element == null) {
+            return null;
+        }
+        if (isRenamable(element)) {
+            if (element instanceof OpenSCADResolvableElement resolvable) {
+                final PsiReference reference = resolvable.getReference();
+                if (reference != null) {
+                    final PsiElement resolved = reference.resolve();
+                    if (resolved != null) {
+                        return resolved;
+                    }
+                }
+            }
+            return element;
+        }
+        if (element.getNode().getElementType() == OpenSCADTypes.IDENTIFIER) {
+            final PsiNameIdentifierOwner owner = PsiTreeUtil.getParentOfType(element, PsiNameIdentifierOwner.class, false);
+            if (owner != null && isRenamable(owner)) {
+                return owner;
+            }
+        }
+        return null;
     }
 
     @NotNull

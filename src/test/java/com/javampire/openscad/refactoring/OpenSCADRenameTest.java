@@ -6,6 +6,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.javampire.openscad.psi.OpenSCADFunctionDeclaration;
 import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
+import com.javampire.openscad.psi.OpenSCADModuleObjNameRef;
 import com.javampire.openscad.psi.OpenSCADVariableDeclaration;
 import com.javampire.openscad.psi.OpenSCADVariableRefExpr;
 
@@ -30,6 +31,32 @@ public class OpenSCADRenameTest extends BasePlatformTestCase {
         assertNotNull(module);
         myFixture.renameElement(module, "bar");
         myFixture.checkResultByFile("module_rename_after.scad");
+    }
+
+    public void testRenameModuleFromCallBeforeDeclaration() {
+        myFixture.configureByFile("module_call_before_declaration_before.scad");
+        OpenSCADModuleObjNameRef moduleCall = PsiTreeUtil.findChildOfType(myFixture.getFile(), OpenSCADModuleObjNameRef.class);
+        assertNotNull(moduleCall);
+        assertEquals("main", moduleCall.getName());
+        OpenSCADRenameProcessor processor = new OpenSCADRenameProcessor();
+        PsiElement toRename = processor.substituteElementToRename(moduleCall, null);
+        assertInstanceOf(toRename, OpenSCADModuleDeclaration.class);
+        assertEquals("main", ((OpenSCADModuleDeclaration) toRename).getName());
+        myFixture.renameElement(toRename, "entry");
+        myFixture.checkResultByFile("module_call_before_declaration_after.scad");
+    }
+
+    public void testRenameModuleFromNameIdentifier() {
+        myFixture.configureByFile("module_call_before_declaration_before.scad");
+        OpenSCADModuleDeclaration module = PsiTreeUtil.findChildOfType(myFixture.getFile(), OpenSCADModuleDeclaration.class);
+        assertNotNull(module);
+        PsiElement nameIdentifier = module.getNameIdentifier();
+        assertNotNull(nameIdentifier);
+        OpenSCADRenameProcessor processor = new OpenSCADRenameProcessor();
+        PsiElement toRename = processor.substituteElementToRename(nameIdentifier, null);
+        assertInstanceOf(toRename, OpenSCADModuleDeclaration.class);
+        myFixture.renameElement(toRename, "entry");
+        myFixture.checkResultByFile("module_call_before_declaration_after.scad");
     }
 
     public void testRenameFunction() {

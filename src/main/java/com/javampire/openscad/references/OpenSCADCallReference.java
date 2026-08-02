@@ -10,7 +10,13 @@ import com.javampire.openscad.psi.OpenSCADNamedElement;
 import com.javampire.openscad.psi.OpenSCADResolvableElement;
 import com.javampire.openscad.psi.OpenSCADVariableDeclaration;
 import com.javampire.openscad.psi.OpenSCADVariableRefExpr;
+import com.javampire.openscad.psi.OpenSCADModuleObjNameRef;
+import com.javampire.openscad.psi.OpenSCADModuleOpNameRef;
+import com.javampire.openscad.psi.OpenSCADFunctionNameRef;
 import com.javampire.openscad.psi.OpenSCADPsiImplUtil;
+import com.javampire.openscad.psi.stub.function.OpenSCADFunctionIndex;
+import com.javampire.openscad.psi.stub.module.OpenSCADModuleIndex;
+import com.javampire.openscad.references.OpenSCADReferenceResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,6 +41,12 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
     public ResolveResult[] multiResolve(boolean incompleteCode) {
         if (myElement instanceof OpenSCADVariableRefExpr) {
             return resolveVariableReferences();
+        }
+        if (myElement instanceof OpenSCADModuleObjNameRef || myElement instanceof OpenSCADModuleOpNameRef) {
+            return resolveIndexedReferences(OpenSCADModuleIndex.getInstance());
+        }
+        if (myElement instanceof OpenSCADFunctionNameRef) {
+            return resolveIndexedReferences(OpenSCADFunctionIndex.getInstance());
         }
         Project project = myElement.getProject();
         final OpenSCADReferenceResolver resolver = myElement.getReferenceResolver();
@@ -77,6 +89,38 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
         final Collection<? extends OpenSCADNamedElement> elementResults = resolver.get(
                 referencedName, project, GlobalSearchScope.allScope(project)
         );
+        final List<ResolveResult> results = new ArrayList<>();
+        for (OpenSCADNamedElement calledElement : elementResults) {
+            results.add(new PsiElementResolveResult(calledElement));
+        }
+        return results.toArray(ResolveResult.EMPTY_ARRAY);
+    }
+
+    @NotNull
+    private ResolveResult[] resolveIndexedReferences(@NotNull OpenSCADReferenceResolver resolver) {
+        Project project = myElement.getProject();
+        final Collection<? extends OpenSCADNamedElement> elementResults = resolver.get(
+                referencedName, project, GlobalSearchScope.allScope(project)
+        );
+        if (elementResults.isEmpty()) {
+            return ResolveResult.EMPTY_ARRAY;
+        }
+        final PsiFile containingFile = myElement.getContainingFile();
+        final List<ResolveResult> sameFileResults = new ArrayList<>();
+        for (OpenSCADNamedElement calledElement : elementResults) {
+            if (calledElement.getContainingFile().equals(containingFile)) {
+                sameFileResults.add(new PsiElementResolveResult(calledElement));
+            }
+        }
+        if (sameFileResults.size() == 1) {
+            return sameFileResults.toArray(ResolveResult.EMPTY_ARRAY);
+        }
+        if (sameFileResults.size() > 1) {
+            return new ResolveResult[]{sameFileResults.get(sameFileResults.size() - 1)};
+        }
+        if (elementResults.size() == 1) {
+            return new ResolveResult[]{new PsiElementResolveResult(elementResults.iterator().next())};
+        }
         final List<ResolveResult> results = new ArrayList<>();
         for (OpenSCADNamedElement calledElement : elementResults) {
             results.add(new PsiElementResolveResult(calledElement));

@@ -8,11 +8,11 @@ public class OpenSCADRefactoringSupportProvider extends RefactoringSupportProvid
 
     @Override
     public boolean isMemberInplaceRenameAvailable(@NotNull PsiElement element, PsiElement context) {
-        return OpenSCADRenameUtil.isRenamable(element);
+        return OpenSCADRenameUtil.getRenamableElement(element) != null;
     }
 
     @Override
     public boolean isInplaceRenameAvailable(@NotNull PsiElement element, PsiElement context) {
-        return OpenSCADRenameUtil.isRenamable(element);
+        return OpenSCADRenameUtil.getRenamableElement(element) != null;
     }
 }
