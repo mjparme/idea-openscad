@@ -81,6 +81,14 @@ public class OpenSCADPsiImplUtil {
         return null;
     }
 
+    public static int getTextOffset(@NotNull PsiElement element) {
+        final PsiElement nameIdentifier = getNameIdentifier(element);
+        if (nameIdentifier != null) {
+            return nameIdentifier.getTextOffset();
+        }
+        return element.getTextRange().getStartOffset();
+    }
+
     public static PsiReference getReference(PsiElement element) {
         // TODO: implement parameter references
         LOG.debug("Unhandled reference element: " + element);

@@ -13,9 +13,7 @@ public class OpenSCADAnnotator implements Annotator {
 
     @Override
     public void annotate(@NotNull PsiElement element, @NotNull AnnotationHolder holder) {
-        if (element instanceof OpenSCADModuleDeclaration
-                || element instanceof OpenSCADModuleObjNameRef
-                || element instanceof OpenSCADModuleOpNameRef) {
+        if (element instanceof OpenSCADModuleDeclaration || element instanceof OpenSCADModuleObjNameRef || element instanceof OpenSCADModuleOpNameRef) {
             annotate(element, OpenSCADSyntaxHighlighter.MODULE_NAME, holder);
         } else if (element instanceof OpenSCADFunctionDeclaration || element instanceof OpenSCADFunctionNameRef) {
             annotate(element, OpenSCADSyntaxHighlighter.FUNCTION_NAME, holder);
@@ -24,15 +22,12 @@ public class OpenSCADAnnotator implements Annotator {
         }
     }
 
-    private static void annotate(@NotNull PsiElement element,
-                                 @NotNull TextAttributesKey attributesKey,
-                                 @NotNull AnnotationHolder holder) {
-        final PsiElement range = element instanceof PsiNameIdentifierOwner owner
-                ? owner.getNameIdentifier()
-                : element;
+    private static void annotate(@NotNull PsiElement element, @NotNull TextAttributesKey attributesKey, @NotNull AnnotationHolder holder) {
+        final PsiElement range = element instanceof PsiNameIdentifierOwner owner ? owner.getNameIdentifier() : element;
         if (range == null) {
             return;
         }
+
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(range)
                 .textAttributes(attributesKey)

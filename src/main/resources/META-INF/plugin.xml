@@ -50,8 +50,10 @@
         <lang.commenter language="OpenSCAD" implementationClass="com.javampire.openscad.editor.OpenSCADCommenter"/>
         <lang.documentationProvider language="OpenSCAD" implementationClass="com.javampire.openscad.documentation.OpenSCADDocumentationProvider"/>
         <lang.refactoringSupport language="OpenSCAD" implementationClass="com.javampire.openscad.refactoring.OpenSCADRefactoringSupportProvider"/>
+        <renameHandler implementation="com.javampire.openscad.refactoring.OpenSCADRenameHandler" order="first"/>
+        <lang.targetElementEvaluator language="OpenSCAD"
+                                    implementationClass="com.javampire.openscad.refactoring.OpenSCADTargetElementEvaluator"/>
         <renamePsiElementProcessor implementation="com.javampire.openscad.refactoring.OpenSCADRenameProcessor"/>
-        <lang.renameProcessor language="OpenSCAD" implementationClass="com.javampire.openscad.refactoring.OpenSCADRenameProcessor"/>
         <lang.findUsagesProvider language="OpenSCAD" implementationClass="com.javampire.openscad.refactoring.OpenSCADFindUsagesProvider"/>
         <lang.elementManipulator forClass="com.intellij.psi.PsiNameIdentifierOwner"
                                  implementationClass="com.javampire.openscad.refactoring.OpenSCADNamedElementManipulator"/>
