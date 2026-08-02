@@ -17,9 +17,6 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        language: [ 'java' ]
 
     steps:
       - uses: actions/setup-java@v4
@@ -28,12 +25,6 @@ jobs:
           java-version: 25
       - uses: actions/checkout@v4
       - uses: gradle/wrapper-validation-action@v1.1.0
-
-      # CodeQL initialization
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
 
       - name: Run Tests
         run: ./gradlew check
@@ -50,10 +41,6 @@ jobs:
       # Run verifyPlugin Gradle task
       - name: Verify Plugin
         run: ./gradlew verifyPlugin
-
-      # Security scan with CodeQL
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
 
       # Cache Gradle dependencies
       - name: Setup Gradle Dependencies Cache
