@@ -29,6 +29,7 @@ public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettin
     @Override
     public void loadState(@NotNull final OpenSCADSettings state) {
         XmlSerializerUtil.copyBean(state, this);
+        openSCADExecutable = normalizeExecutablePath(openSCADExecutable);
     }
 
     @Nullable
@@ -36,8 +37,8 @@ public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettin
         return openSCADExecutable;
     }
 
-    public void setOpenSCADExecutable(@NotNull final String openSCADExecutable) {
-        this.openSCADExecutable = openSCADExecutable;
+    public void setOpenSCADExecutable(@Nullable final String openSCADExecutable) {
+        this.openSCADExecutable = normalizeExecutablePath(openSCADExecutable);
     }
 
     public boolean isAllowPreviewEditor() {
@@ -49,6 +50,32 @@ public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettin
     }
 
     public boolean hasExecutable() {
-        return !StringUtil.isEmptyOrSpaces(getOpenSCADExecutable()) && new File(getOpenSCADExecutable()).canExecute();
+        final String path = getOpenSCADExecutable();
+        if (StringUtil.isEmptyOrSpaces(path)) {
+            return false;
+        }
+        final File file = new File(path);
+        return file.isFile() && file.canExecute();
+    }
+
+    @Nullable
+    static String normalizeExecutablePath(@Nullable final String path) {
+        if (StringUtil.isEmptyOrSpaces(path)) {
+            return null;
+        }
+        final String trimmed = path.trim();
+        final File file = new File(trimmed);
+        if (file.isFile()) {
+            return file.getPath();
+        }
+        if (trimmed.endsWith(".app")) {
+            for (final String executableName : new String[]{"OpenSCAD", "openscad"}) {
+                final File macBinary = new File(file, "Contents/MacOS/" + executableName);
+                if (macBinary.isFile()) {
+                    return macBinary.getPath();
+                }
+            }
+        }
+        return trimmed;
     }
 }

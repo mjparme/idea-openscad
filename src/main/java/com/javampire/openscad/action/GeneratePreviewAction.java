@@ -39,7 +39,8 @@ public class GeneratePreviewAction extends ExportAction {
             }
         }
 
-        return previewFileEditor != null ? previewFileEditor.getPreviewSite().scadFile : null;
+        final var previewSite = previewFileEditor != null ? previewFileEditor.getPreviewSite() : null;
+        return previewSite != null ? previewSite.scadFile : null;
     }
 
     @Override
@@ -53,6 +54,13 @@ public class GeneratePreviewAction extends ExportAction {
 
     @Override
     protected void postExecution(@NotNull final AnActionEvent event) {
-        previewFileEditor.getPreviewSite().previewFile.refresh(true, false);
+        if (previewFileEditor == null) {
+            return;
+        }
+        final var previewSite = previewFileEditor.getPreviewSite();
+        if (previewSite == null || previewSite.previewFile == null) {
+            return;
+        }
+        previewSite.previewFile.refresh(true, false);
     }
 }
