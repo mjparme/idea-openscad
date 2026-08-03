@@ -26,6 +26,8 @@ public final class BuiltinSkeletons {
     private static final String MODULES_RESOURCE = "/com/javampire/openscad/skeletons/builtin_modules.scad";
     private static final String FUNCTIONS_RESOURCE = "/com/javampire/openscad/skeletons/builtin_functions.scad";
     private static final String POSITIONAL_FIRST_ARGUMENT_MARKER = "// POSITIONAL_FIRST_ARGUMENT:";
+    private static final Set<String> DEFAULT_POSITIONAL_FIRST_ARGUMENT_MODULES =
+            Set.of("cube", "sphere", "rotate", "translate");
 
     private static Map<String, OpenSCADModuleDeclaration> moduleDeclarations;
     private static Map<String, OpenSCADFunctionDeclaration> functionDeclarations;
@@ -78,6 +80,9 @@ public final class BuiltinSkeletons {
             }
             if (positionalFirstArgumentModules == null) {
                 positionalFirstArgumentModules = Set.of();
+            }
+            if (positionalFirstArgumentModules.isEmpty()) {
+                positionalFirstArgumentModules = DEFAULT_POSITIONAL_FIRST_ARGUMENT_MODULES;
             }
         }
         return positionalFirstArgumentModules;
@@ -147,11 +152,12 @@ public final class BuiltinSkeletons {
     @NotNull
     private static Set<String> parsePositionalFirstArgumentModules(@NotNull final String skeletonText) {
         for (final String line : skeletonText.split("\n")) {
-            final String trimmed = line.trim();
-            if (!trimmed.startsWith(POSITIONAL_FIRST_ARGUMENT_MARKER)) {
+            final String trimmed = line.trim().replace("\uFEFF", "");
+            if (!trimmed.contains(POSITIONAL_FIRST_ARGUMENT_MARKER)) {
                 continue;
             }
-            final String names = trimmed.substring(POSITIONAL_FIRST_ARGUMENT_MARKER.length()).trim();
+            final int markerIndex = trimmed.indexOf(POSITIONAL_FIRST_ARGUMENT_MARKER);
+            final String names = trimmed.substring(markerIndex + POSITIONAL_FIRST_ARGUMENT_MARKER.length()).trim();
             if (names.isEmpty()) {
                 return Set.of();
             }
