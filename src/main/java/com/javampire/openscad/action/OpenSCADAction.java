@@ -22,10 +22,15 @@ public abstract class OpenSCADAction extends AnAction {
      */
     protected Presentation checkOpenSCADPrerequisites(@NotNull final AnActionEvent event) {
         final Presentation presentation = event.getPresentation();
-        if (OpenSCADSettings.getInstance().hasExecutable()
-                && (ActionPlaces.isPopupPlace(event.getPlace()) || ActionPlaces.EDITOR_TOOLBAR.equals(event.getPlace()))) {
+        if (!OpenSCADSettings.getInstance().hasExecutable()) {
+            presentation.setEnabledAndVisible(false);
+            return presentation;
+        }
+        if (ActionPlaces.isPopupPlace(event.getPlace()) || ActionPlaces.EDITOR_TOOLBAR.equals(event.getPlace())) {
             final PsiFile psiFile = event.getData(CommonDataKeys.PSI_FILE);
-            presentation.setEnabledAndVisible(psiFile != null && psiFile.getLanguage() == OpenSCADLanguage.INSTANCE);
+            final OpenSCADPreviewFileEditor previewEditor = event.getData(OpenSCADDataKeys.PREVIEW_EDITOR);
+            final boolean openScadContext = psiFile != null && psiFile.getLanguage() == OpenSCADLanguage.INSTANCE;
+            presentation.setEnabledAndVisible(openScadContext || previewEditor != null);
         } else {
             presentation.setEnabledAndVisible(false);
         }
