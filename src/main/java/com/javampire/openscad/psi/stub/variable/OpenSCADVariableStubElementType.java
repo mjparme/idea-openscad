@@ -50,6 +50,9 @@ public class OpenSCADVariableStubElementType extends IStubElementType<OpenSCADVa
 
     @Override
     public void indexStub(@NotNull OpenSCADVariableStub stub, @NotNull IndexSink sink) {
-        sink.occurrence(VARIABLE, stub.getName());
+        final String name = stub.getName();
+        if (name != null) {
+            sink.occurrence(VARIABLE, name);
+        }
     }
 }
