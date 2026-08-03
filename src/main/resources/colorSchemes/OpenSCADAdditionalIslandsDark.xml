@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<list>
+    <option name="OPENSCAD_COMMENT">
+        <value>
+            <option name="FOREGROUND" value="808080"/>
+            <option name="FONT_TYPE" value="2"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_CUSTOMIZER_COMMENT">
+        <value>
+            <option name="FOREGROUND" value="629755"/>
+            <option name="FONT_TYPE" value="2"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_IMPORT">
+        <value>
+            <option name="FOREGROUND" value="d3730d"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_IMPORT_PATH">
+        <value>
+            <option name="FOREGROUND" value="6a8759"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_KEYWORD">
+        <value>
+            <option name="FOREGROUND" value="cc7832"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_FUNCTION_KEYWORD">
+        <value>
+            <option name="FOREGROUND" value="6a9955"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_OPERATOR_KEYWORD">
+        <value>
+            <option name="FOREGROUND" value="cc7832"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_OBJECT_KEYWORD">
+        <value>
+            <option name="FOREGROUND" value="cc7832"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_IDENTIFIER">
+        <value>
+            <option name="FOREGROUND" value="0cea7b"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_MODULE_NAME">
+        <value>
+            <option name="FOREGROUND" value="d7119f"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_FUNCTION_NAME">
+        <value>
+            <option name="FOREGROUND" value="7a5eff"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_VARIABLE_NAME">
+        <value>
+            <option name="FOREGROUND" value="98c379"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_PARAMETER_NAME">
+        <value>
+            <option name="FOREGROUND" value="d3c70c"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_NUMBER">
+        <value>
+            <option name="FOREGROUND" value="6897bb"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_STRING">
+        <value>
+            <option name="FOREGROUND" value="bc89c7"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_SEPARATOR">
+        <value>
+            <option name="FOREGROUND" value="a9b7c6"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_BRACES">
+        <value>
+            <option name="FOREGROUND" value="a9b7c6"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_BRACKETS">
+        <value>
+            <option name="FOREGROUND" value="a9b7c6"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_ANGLE_BRACKETS">
+        <value>
+            <option name="FOREGROUND" value="a9b7c6"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_PARENTHESES">
+        <value>
+            <option name="FOREGROUND" value="007aff"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_OPERATION_SIGN">
+        <value>
+            <option name="FOREGROUND" value="cc7832"/>
+        </value>
+    </option>
+    <option name="OPENSCAD_BAD_CHARACTER">
+        <value>
+            <option name="FOREGROUND" value="ff6b68"/>
+        </value>
+    </option>
+</list>
