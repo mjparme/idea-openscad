@@ -176,7 +176,7 @@ module rotate_extrude(angle=360, convexity=2) {
 //     %cube([x,y,z]); // corner of cube should coincide with end of cylinder
 //
 //
-module rotate(a = deg_a, v = [x, y, z]) {
+module rotate(a = [0, 0, 0]) {
     children();
 }
 
@@ -191,7 +191,7 @@ module rotate(a = deg_a, v = [x, y, z]) {
 //        sphere(1,center = true);
 //
 //
-module translate(v=[x, y, z]) {
+module translate(v=[0, 0, 0]) {
     children();
 }
 
@@ -209,7 +209,7 @@ module translate(v=[x, y, z]) {
 //     function instead.
 //
 //
-module scale(v = [x, y, z]) {
+module scale(v = [1, 1, 1]) {
     children();
 }
 
@@ -271,7 +271,7 @@ module resize(newsize=[0, 0, 0], auto=[false, false, false]) {
 //     mirror([1,0,0]) translate([1,0,0]) rotate([0,0,10]) cube([3,2,1]);
 //
 //
-module mirror(v = [x, y, z]) {
+module mirror(v = [0, 0, 0]) {
     children();
 }
 
@@ -905,7 +905,7 @@ module assert(condition, message){}
 //     sphere(2, $fa=5, $fs=0.1);
 //
 //
-module sphere(r = 1, d = undef, $fn = 0, $fa = 12, $fs = 2){}
+module sphere(r = 1){}
 
 // A polyhedron is the most general 3D primitive solid. It can be used to
 // create any regular or irregular shape including those with concave as

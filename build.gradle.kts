@@ -155,6 +155,23 @@ tasks {
         dependsOn(patchChangelog)
     }
 
+    val cleanSandboxIndexes by registering {
+        group = "intellij"
+        description = "Clear sandbox IDE indexes so bundled skeleton edits are picked up on the next runIde"
+        doLast {
+            val sandbox = layout.projectDirectory.dir(".intellijPlatform/sandbox").asFile
+            if (!sandbox.exists()) {
+                return@doLast
+            }
+            sandbox.walkTopDown()
+                .filter { it.isDirectory && (it.name == "index" || it.name == "caches") }
+                .forEach { it.deleteRecursively() }
+        }
+    }
+
+    named("runIde") {
+        dependsOn(cleanSandboxIndexes)
+    }
 }
 
 intellijPlatformTesting {
