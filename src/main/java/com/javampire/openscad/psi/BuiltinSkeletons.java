@@ -32,8 +32,18 @@ public final class BuiltinSkeletons {
     private static Map<String, OpenSCADModuleDeclaration> moduleDeclarations;
     private static Map<String, OpenSCADFunctionDeclaration> functionDeclarations;
     private static Set<String> positionalFirstArgumentModules;
+    private static long moduleSkeletonStamp = -1;
+    private static long functionSkeletonStamp = -1;
 
     private BuiltinSkeletons() {
+    }
+
+    public static void clearCaches() {
+        moduleDeclarations = null;
+        functionDeclarations = null;
+        positionalFirstArgumentModules = null;
+        moduleSkeletonStamp = -1;
+        functionSkeletonStamp = -1;
     }
 
     @Nullable
@@ -57,10 +67,12 @@ public final class BuiltinSkeletons {
 
     @NotNull
     private static Map<String, OpenSCADModuleDeclaration> getModuleDeclarations(@NotNull final Project project) {
-        if (moduleDeclarations == null) {
-            final PsiFile skeleton = loadSkeleton(project, MODULES_RESOURCE);
+        final PsiFile skeleton = loadSkeleton(project, MODULES_RESOURCE);
+        final long stamp = skeletonStamp(skeleton);
+        if (moduleDeclarations == null || moduleSkeletonStamp != stamp) {
             moduleDeclarations = indexModules(skeleton);
             positionalFirstArgumentModules = parsePositionalFirstArgumentModules(skeleton);
+            moduleSkeletonStamp = stamp;
         }
         return moduleDeclarations;
     }
@@ -93,10 +105,21 @@ public final class BuiltinSkeletons {
 
     @NotNull
     private static Map<String, OpenSCADFunctionDeclaration> getFunctionDeclarations(@NotNull final Project project) {
-        if (functionDeclarations == null) {
-            functionDeclarations = indexFunctions(loadSkeleton(project, FUNCTIONS_RESOURCE));
+        final PsiFile skeleton = loadSkeleton(project, FUNCTIONS_RESOURCE);
+        final long stamp = skeletonStamp(skeleton);
+        if (functionDeclarations == null || functionSkeletonStamp != stamp) {
+            functionDeclarations = indexFunctions(skeleton);
+            functionSkeletonStamp = stamp;
         }
         return functionDeclarations;
+    }
+
+    private static long skeletonStamp(@Nullable final PsiFile skeleton) {
+        if (skeleton == null) {
+            return -1;
+        }
+        final VirtualFile virtualFile = skeleton.getVirtualFile();
+        return virtualFile != null ? virtualFile.getModificationStamp() : -1;
     }
 
     @Nullable
