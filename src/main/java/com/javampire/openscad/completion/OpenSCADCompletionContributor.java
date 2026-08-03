@@ -102,14 +102,12 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     private record CachedModuleInfo(@NotNull String name, @NotNull List<ModuleParameterInfo> parameters, @NotNull javax.swing.Icon icon) {
     }
 
-    private static final InsertHandler<LookupElement> NAMED_MODULE_FILL_INSERT_HANDLER =
-            (context, item) -> fillModuleCallFromLookup(context, item, false);
-
-    private static final InsertHandler<LookupElement> POSITIONAL_MODULE_FILL_INSERT_HANDLER =
-            (context, item) -> fillModuleCallFromLookup(context, item, true);
+    private static final InsertHandler<LookupElement> MODULE_FILL_INSERT_HANDLER =
+            (context, item) -> fillModuleCallFromLookup(context, item);
 
     private static final InsertHandler<LookupElement> MODULE_PAREN_INSERT_HANDLER = (context, item) -> {
-        final List<ModuleParameterInfo> parameters = resolveModuleParameters(item, context.getProject());
+        final String moduleName = resolveModuleName(item, context.getProject());
+        final List<ModuleParameterInfo> parameters = resolveModuleParameters(item, context.getProject(), moduleName);
         if (parameters.isEmpty()) {
             insertEmptyModuleCall(context);
         }
@@ -119,19 +117,38 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     };
 
     private static void fillModuleCallFromLookup(@NotNull final InsertionContext context,
-                                                   @NotNull final LookupElement item,
-                                                   final boolean positionalFirstArgument) {
-        final List<ModuleParameterInfo> parameters = resolveModuleParameters(item, context.getProject());
+                                                   @NotNull final LookupElement item) {
+        final String moduleName = resolveModuleName(item, context.getProject());
+        final List<ModuleParameterInfo> parameters = resolveModuleParameters(item, context.getProject(), moduleName);
         if (parameters.isEmpty()) {
             insertEmptyModuleCall(context);
             return;
         }
-        insertFilledModuleCall(context, parameters, positionalFirstArgument);
+        insertFilledModuleCall(
+                context,
+                parameters,
+                BuiltinSkeletons.isPositionalFirstArgumentModule(moduleName));
+    }
+
+    @NotNull
+    private static String resolveModuleName(@NotNull final LookupElement item, @Nullable final Project project) {
+        final Object lookupObject = unwrapLookupObject(item);
+        if (lookupObject instanceof CachedModuleLookupObject cachedLookup) {
+            return cachedLookup.moduleName();
+        }
+        if (lookupObject instanceof ModuleLookupObject moduleLookup) {
+            final String name = moduleLookup.module().getName();
+            if (name != null) {
+                return name;
+            }
+        }
+        return stripModuleLookupSuffix(item.getLookupString());
     }
 
     @NotNull
     private static List<ModuleParameterInfo> resolveModuleParameters(@NotNull final LookupElement item,
-                                                                     @Nullable final Project project) {
+                                                                     @Nullable final Project project,
+                                                                     @NotNull final String moduleName) {
         final Object lookupObject = unwrapLookupObject(item);
         if (lookupObject instanceof CachedModuleLookupObject cachedLookup && !cachedLookup.parameters().isEmpty()) {
             return cachedLookup.parameters();
@@ -139,7 +156,6 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         if (lookupObject instanceof ModuleLookupObject moduleLookup) {
             return getModuleParameters(moduleLookup.module());
         }
-        final String moduleName = stripModuleLookupSuffix(item.getLookupString());
         if (project != null) {
             final List<ModuleParameterInfo> builtinParameters = getBuiltinModuleParameters(project, moduleName);
             if (!builtinParameters.isEmpty()) {
@@ -660,7 +676,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         LookupElementBuilder builder = LookupElementBuilder
                 .create(new ModuleLookupObject(module, fillNamedArguments), text)
                 .withIcon(presentation.getIcon(true))
-                .withInsertHandler(fillNamedArguments ? NAMED_MODULE_FILL_INSERT_HANDLER : MODULE_PAREN_INSERT_HANDLER);
+                .withInsertHandler(fillNamedArguments ? MODULE_FILL_INSERT_HANDLER : MODULE_PAREN_INSERT_HANDLER);
         if (tailText != null) {
             builder = builder.appendTailText(tailText, true);
         }
@@ -678,7 +694,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                 .create(new ModuleLookupObject(module, true), text)
                 .withIcon(presentation.getIcon(true))
                 .appendTailText(MODULE_WITH_ARGS_SUFFIX, true)
-                .withInsertHandler(NAMED_MODULE_FILL_INSERT_HANDLER);
+                .withInsertHandler(MODULE_FILL_INSERT_HANDLER);
         if (tailText != null) {
             builder = builder.appendTailText(tailText, true);
         }
@@ -696,13 +712,10 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
 
     private static LookupElement toCachedModuleLookupElement(@NotNull final CachedModuleInfo moduleInfo,
                                                              final boolean fillNamedArguments) {
-        final InsertHandler<LookupElement> fillHandler = fillNamedArguments
-                ? moduleFillInsertHandler(moduleInfo.name())
-                : MODULE_PAREN_INSERT_HANDLER;
         return LookupElementBuilder
                 .create(new CachedModuleLookupObject(moduleInfo.name(), moduleInfo.parameters(), fillNamedArguments), moduleInfo.name())
                 .withIcon(moduleInfo.icon())
-                .withInsertHandler(fillHandler);
+                .withInsertHandler(fillNamedArguments ? MODULE_FILL_INSERT_HANDLER : MODULE_PAREN_INSERT_HANDLER);
     }
 
     private static LookupElement toCachedModuleWithArgsLookupElement(@NotNull final CachedModuleInfo moduleInfo) {
@@ -710,14 +723,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                 .create(new CachedModuleLookupObject(moduleInfo.name(), moduleInfo.parameters(), true), moduleInfo.name())
                 .withIcon(moduleInfo.icon())
                 .appendTailText(MODULE_WITH_ARGS_SUFFIX, true)
-                .withInsertHandler(moduleFillInsertHandler(moduleInfo.name()));
-    }
-
-    @NotNull
-    private static InsertHandler<LookupElement> moduleFillInsertHandler(@NotNull final String moduleName) {
-        return BuiltinSkeletons.isPositionalFirstArgumentModule(moduleName)
-                ? POSITIONAL_MODULE_FILL_INSERT_HANDLER
-                : NAMED_MODULE_FILL_INSERT_HANDLER;
+                .withInsertHandler(MODULE_FILL_INSERT_HANDLER);
     }
 
     @NotNull
