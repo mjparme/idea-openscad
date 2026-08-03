@@ -221,6 +221,15 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         myFixture.checkResult("linear_extrude(height = fanwidth, center = true, convexity = 10, twist = -fanrot, slices = 20, scale = 1.0)");
     }
 
+    public void testBuiltinRotateWithArgsUsesCurrentSkeletonDefaults() {
+        myFixture.configureByText("test.scad", "<caret>");
+        final LookupElement rotateWithArgs = findLookupItemWithFilledArgs("rotate");
+        assertNotNull(rotateWithArgs);
+        selectLookupItem(rotateWithArgs);
+        myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
+        myFixture.checkResult("rotate([1, 1, 1])");
+    }
+
     private void selectLookupItem(LookupElement item) {
         final var lookup = myFixture.getLookup();
         assertNotNull(lookup);

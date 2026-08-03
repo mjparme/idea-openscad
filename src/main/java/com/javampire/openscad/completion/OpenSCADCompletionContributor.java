@@ -94,9 +94,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         }
     }
 
-    private record CachedModuleLookupObject(@NotNull String moduleName,
-                                            @NotNull List<ModuleParameterInfo> parameters,
-                                            boolean fillNamedArguments) {
+    private record CachedModuleLookupObject(@NotNull String moduleName, boolean fillNamedArguments) {
     }
 
     private record CachedModuleInfo(@NotNull String name, @NotNull List<ModuleParameterInfo> parameters, @NotNull javax.swing.Icon icon) {
@@ -150,8 +148,8 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                                                                      @Nullable final Project project,
                                                                      @NotNull final String moduleName) {
         final Object lookupObject = unwrapLookupObject(item);
-        if (lookupObject instanceof CachedModuleLookupObject cachedLookup && !cachedLookup.parameters().isEmpty()) {
-            return cachedLookup.parameters();
+        if (lookupObject instanceof CachedModuleLookupObject) {
+            return project != null ? getBuiltinModuleParameters(project, moduleName) : List.of();
         }
         if (lookupObject instanceof ModuleLookupObject moduleLookup) {
             return getModuleParameters(moduleLookup.module());
@@ -187,9 +185,11 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
             }
         }
         else if (lookupObject instanceof CachedModuleLookupObject cachedLookup) {
-            parameters = cachedLookup.parameters();
             fillNamedArguments = cachedLookup.fillNamedArguments();
             moduleName = cachedLookup.moduleName();
+            if (project != null) {
+                parameters = getBuiltinModuleParameters(project, moduleName);
+            }
         }
 
         if (parameters.isEmpty() && fillNamedArguments && project != null) {
@@ -240,6 +240,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     private static final String BUILT_IN_SPECIAL_VARIABLES_FILENAME = "/com/javampire/openscad/skeletons/builtin_special_variables.scad";
 
     private static List<CachedModuleInfo> builtinModules;
+    private static long builtinModulesStamp = -1;
     private static List<LookupElement> builtinFunctions;
     private static List<LookupElement> builtinSpecialVariables;
     private static List<GlobalLibraryEntry> globalLibraryEntries;
@@ -474,22 +475,9 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     private void addBuiltinModules(@NotNull final Project project,
                                    @NotNull final CompletionResultSet result,
                                    final boolean fillNamedArguments) {
-        if (builtinModules == null) {
-            final PsiFile moduleSkeleton = PsiManager.getInstance(project).findFile(
-                    VfsUtil.findFileByURL(getClass().getResource(BUILT_IN_MODULES_FILENAME))
-            );
-            if (moduleSkeleton == null) {
-                LOG.warn("Can not parse builtin modules skeleton file, completion will not be available on modules.");
-                builtinModules = List.of();
-            } else {
-                builtinModules = PsiTreeUtil.getChildrenOfTypeAsList(moduleSkeleton, OpenSCADModuleDeclaration.class).stream()
-                        .map(OpenSCADCompletionContributor::toCachedModuleInfo)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toList());
-            }
-        }
+        final List<CachedModuleInfo> modules = getBuiltinModules(project);
         final List<LookupElement> elements = new ArrayList<>();
-        for (CachedModuleInfo info : builtinModules) {
+        for (CachedModuleInfo info : modules) {
             final LookupElement primary = toCachedModuleLookupElement(info, fillNamedArguments);
             if (primary != null) {
                 elements.add(primary);
@@ -502,6 +490,35 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
             }
         }
         result.addAllElements(elements);
+    }
+
+    @NotNull
+    private static List<CachedModuleInfo> getBuiltinModules(@NotNull final Project project) {
+        final VirtualFile skeletonFile = findBuiltinModulesVirtualFile();
+        final long stamp = skeletonFile != null ? skeletonFile.getModificationStamp() : -1;
+        if (builtinModules == null || builtinModulesStamp != stamp) {
+            builtinModulesStamp = stamp;
+            BuiltinSkeletons.clearCaches();
+            final PsiFile moduleSkeleton = skeletonFile != null
+                    ? PsiManager.getInstance(project).findFile(skeletonFile)
+                    : null;
+            if (moduleSkeleton == null) {
+                LOG.warn("Can not parse builtin modules skeleton file, completion will not be available on modules.");
+                builtinModules = List.of();
+            } else {
+                builtinModules = PsiTreeUtil.getChildrenOfTypeAsList(moduleSkeleton, OpenSCADModuleDeclaration.class).stream()
+                        .map(OpenSCADCompletionContributor::toCachedModuleInfo)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+            }
+        }
+        return builtinModules;
+    }
+
+    @Nullable
+    private static VirtualFile findBuiltinModulesVirtualFile() {
+        final java.net.URL resourceUrl = OpenSCADCompletionContributor.class.getResource(BUILT_IN_MODULES_FILENAME);
+        return resourceUrl != null ? VfsUtil.findFileByURL(resourceUrl) : null;
     }
 
     private void addBuiltinFunctions(@NotNull final Project project, @NotNull final CompletionResultSet result) {
@@ -713,14 +730,14 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     private static LookupElement toCachedModuleLookupElement(@NotNull final CachedModuleInfo moduleInfo,
                                                              final boolean fillNamedArguments) {
         return LookupElementBuilder
-                .create(new CachedModuleLookupObject(moduleInfo.name(), moduleInfo.parameters(), fillNamedArguments), moduleInfo.name())
+                .create(new CachedModuleLookupObject(moduleInfo.name(), fillNamedArguments), moduleInfo.name())
                 .withIcon(moduleInfo.icon())
                 .withInsertHandler(fillNamedArguments ? MODULE_FILL_INSERT_HANDLER : MODULE_PAREN_INSERT_HANDLER);
     }
 
     private static LookupElement toCachedModuleWithArgsLookupElement(@NotNull final CachedModuleInfo moduleInfo) {
         return LookupElementBuilder
-                .create(new CachedModuleLookupObject(moduleInfo.name(), moduleInfo.parameters(), true), moduleInfo.name())
+                .create(new CachedModuleLookupObject(moduleInfo.name(), true), moduleInfo.name())
                 .withIcon(moduleInfo.icon())
                 .appendTailText(MODULE_WITH_ARGS_SUFFIX, true)
                 .withInsertHandler(MODULE_FILL_INSERT_HANDLER);
