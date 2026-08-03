@@ -49,6 +49,9 @@ public final class BuiltinSkeletons {
     }
 
     public static boolean isPositionalFirstArgumentModule(@NotNull final String name) {
+        if (DEFAULT_POSITIONAL_FIRST_ARGUMENT_MODULES.contains(name)) {
+            return true;
+        }
         return getPositionalFirstArgumentModules().contains(name);
     }
 
