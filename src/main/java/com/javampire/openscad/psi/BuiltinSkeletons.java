@@ -2,14 +2,13 @@ package com.javampire.openscad.psi;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,8 +22,8 @@ import java.util.stream.Collectors;
  */
 public final class BuiltinSkeletons {
 
-    private static final String MODULES_RESOURCE = "/com/javampire/openscad/skeletons/builtin_modules.scad";
-    private static final String FUNCTIONS_RESOURCE = "/com/javampire/openscad/skeletons/builtin_functions.scad";
+    private static final String MODULES_RESOURCE = BuiltinSkeletonResources.MODULES_RESOURCE;
+    private static final String FUNCTIONS_RESOURCE = BuiltinSkeletonResources.FUNCTIONS_RESOURCE;
     private static final String POSITIONAL_FIRST_ARGUMENT_MARKER = "// POSITIONAL_FIRST_ARGUMENT:";
     private static final Set<String> DEFAULT_POSITIONAL_FIRST_ARGUMENT_MODULES =
             Set.of("cube", "sphere", "rotate", "translate");
@@ -32,8 +31,8 @@ public final class BuiltinSkeletons {
     private static Map<String, OpenSCADModuleDeclaration> moduleDeclarations;
     private static Map<String, OpenSCADFunctionDeclaration> functionDeclarations;
     private static Set<String> positionalFirstArgumentModules;
-    private static long moduleSkeletonStamp = -1;
-    private static long functionSkeletonStamp = -1;
+    private static long moduleSkeletonContentHash = -1;
+    private static long functionSkeletonContentHash = -1;
 
     private BuiltinSkeletons() {
     }
@@ -42,8 +41,8 @@ public final class BuiltinSkeletons {
         moduleDeclarations = null;
         functionDeclarations = null;
         positionalFirstArgumentModules = null;
-        moduleSkeletonStamp = -1;
-        functionSkeletonStamp = -1;
+        moduleSkeletonContentHash = -1;
+        functionSkeletonContentHash = -1;
     }
 
     @Nullable
@@ -67,12 +66,12 @@ public final class BuiltinSkeletons {
 
     @NotNull
     private static Map<String, OpenSCADModuleDeclaration> getModuleDeclarations(@NotNull final Project project) {
-        final PsiFile skeleton = loadSkeleton(project, MODULES_RESOURCE);
-        final long stamp = skeletonStamp(skeleton);
-        if (moduleDeclarations == null || moduleSkeletonStamp != stamp) {
+        final long contentHash = BuiltinSkeletonResources.contentHash(MODULES_RESOURCE);
+        if (moduleDeclarations == null || moduleSkeletonContentHash != contentHash) {
+            final PsiFile skeleton = loadSkeleton(project, MODULES_RESOURCE);
             moduleDeclarations = indexModules(skeleton);
             positionalFirstArgumentModules = parsePositionalFirstArgumentModules(skeleton);
-            moduleSkeletonStamp = stamp;
+            moduleSkeletonContentHash = contentHash;
         }
         return moduleDeclarations;
     }
@@ -80,17 +79,14 @@ public final class BuiltinSkeletons {
     @NotNull
     private static Set<String> getPositionalFirstArgumentModules() {
         if (positionalFirstArgumentModules == null) {
-            final URL resourceUrl = BuiltinSkeletons.class.getResource(MODULES_RESOURCE);
-            if (resourceUrl != null) {
-                final VirtualFile virtualFile = VfsUtil.findFileByURL(resourceUrl);
-                if (virtualFile != null) {
-                    try {
-                        positionalFirstArgumentModules =
-                                parsePositionalFirstArgumentModules(VfsUtil.loadText(virtualFile));
-                    }
-                    catch (java.io.IOException ignored) {
-                        positionalFirstArgumentModules = Set.of();
-                    }
+            final VirtualFile virtualFile = BuiltinSkeletonResources.findVirtualFile(MODULES_RESOURCE);
+            if (virtualFile != null) {
+                try {
+                    positionalFirstArgumentModules =
+                            parsePositionalFirstArgumentModules(virtualFile.contentsToByteArray());
+                }
+                catch (java.io.IOException ignored) {
+                    positionalFirstArgumentModules = Set.of();
                 }
             }
             if (positionalFirstArgumentModules == null) {
@@ -105,30 +101,17 @@ public final class BuiltinSkeletons {
 
     @NotNull
     private static Map<String, OpenSCADFunctionDeclaration> getFunctionDeclarations(@NotNull final Project project) {
-        final PsiFile skeleton = loadSkeleton(project, FUNCTIONS_RESOURCE);
-        final long stamp = skeletonStamp(skeleton);
-        if (functionDeclarations == null || functionSkeletonStamp != stamp) {
-            functionDeclarations = indexFunctions(skeleton);
-            functionSkeletonStamp = stamp;
+        final long contentHash = BuiltinSkeletonResources.contentHash(FUNCTIONS_RESOURCE);
+        if (functionDeclarations == null || functionSkeletonContentHash != contentHash) {
+            functionDeclarations = indexFunctions(loadSkeleton(project, FUNCTIONS_RESOURCE));
+            functionSkeletonContentHash = contentHash;
         }
         return functionDeclarations;
     }
 
-    private static long skeletonStamp(@Nullable final PsiFile skeleton) {
-        if (skeleton == null) {
-            return -1;
-        }
-        final VirtualFile virtualFile = skeleton.getVirtualFile();
-        return virtualFile != null ? virtualFile.getModificationStamp() : -1;
-    }
-
     @Nullable
     private static PsiFile loadSkeleton(@NotNull final Project project, @NotNull final String resourcePath) {
-        final URL resourceUrl = BuiltinSkeletons.class.getResource(resourcePath);
-        if (resourceUrl == null) {
-            return null;
-        }
-        final VirtualFile virtualFile = VfsUtil.findFileByURL(resourceUrl);
+        final VirtualFile virtualFile = BuiltinSkeletonResources.findVirtualFile(resourcePath);
         if (virtualFile == null) {
             return null;
         }
@@ -173,6 +156,11 @@ public final class BuiltinSkeletons {
             return Set.of();
         }
         return parsePositionalFirstArgumentModules(skeleton.getText());
+    }
+
+    @NotNull
+    private static Set<String> parsePositionalFirstArgumentModules(@NotNull final byte[] skeletonBytes) {
+        return parsePositionalFirstArgumentModules(new String(skeletonBytes, StandardCharsets.UTF_8));
     }
 
     @NotNull

@@ -4,6 +4,9 @@ import com.intellij.codeInsight.completion.CompletionType;
 import com.intellij.codeInsight.lookup.Lookup;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import com.javampire.openscad.psi.BuiltinSkeletons;
+import com.javampire.openscad.psi.OpenSCADArgDeclaration;
+import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
 import com.javampire.openscad.settings.OpenSCADSettings;
 
 import java.util.List;
@@ -222,12 +225,17 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
     }
 
     public void testBuiltinRotateWithArgsUsesCurrentSkeletonDefaults() {
+        final OpenSCADModuleDeclaration rotate = BuiltinSkeletons.findModuleDeclaration(getProject(), "rotate");
+        assertNotNull(rotate);
+        final OpenSCADArgDeclaration firstArg = rotate.getArgDeclarationList().getArgDeclarationList().get(0);
+        final String firstDefault = firstArg.getExpr().getText();
+
         myFixture.configureByText("test.scad", "<caret>");
         final LookupElement rotateWithArgs = findLookupItemWithFilledArgs("rotate");
         assertNotNull(rotateWithArgs);
         selectLookupItem(rotateWithArgs);
         myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
-        myFixture.checkResult("rotate([1, 1, 1])");
+        myFixture.checkResult("rotate(" + firstDefault + ")");
     }
 
     private void selectLookupItem(LookupElement item) {

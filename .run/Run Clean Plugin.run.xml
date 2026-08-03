@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run Clean Plugin" type="GradleRunConfiguration" factoryName="Gradle">
-    <log_file alias="idea.log" path="$PROJECT_DIR$/build/idea-sandbox/system/log/idea.log" />
+    <log_file alias="idea.log" path="$PROJECT_DIR$/.intellijPlatform/sandbox/idea-openscad/IU-2026.2/system/log/idea.log" />
     <ExternalSystemSettings>
       <option name="env">
         <map>
@@ -16,7 +16,7 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value="clean" />
+          <option value="cleanSandboxIndexes" />
           <option value="runIde" />
         </list>
       </option>

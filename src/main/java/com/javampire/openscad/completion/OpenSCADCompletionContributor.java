@@ -40,6 +40,7 @@ import com.javampire.openscad.OpenSCADFileType;
 import com.javampire.openscad.OpenSCADLanguage;
 import com.javampire.openscad.psi.OpenSCADArgAssignmentList;
 import com.javampire.openscad.psi.BuiltinSkeletons;
+import com.javampire.openscad.psi.BuiltinSkeletonResources;
 import com.javampire.openscad.psi.OpenSCADArgDeclaration;
 import com.javampire.openscad.psi.OpenSCADArgDeclarationList;
 import com.javampire.openscad.psi.OpenSCADExpr;
@@ -235,12 +236,12 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     private static final String MODULE_WITH_ARGS_SUFFIX = " (with args)";
 
     private static final String _FROM_ = " from ";
-    private static final String BUILT_IN_MODULES_FILENAME = "/com/javampire/openscad/skeletons/builtin_modules.scad";
+    private static final String BUILT_IN_MODULES_FILENAME = BuiltinSkeletonResources.MODULES_RESOURCE;
     private static final String BUILT_IN_FUNCTIONS_FILENAME = "/com/javampire/openscad/skeletons/builtin_functions.scad";
     private static final String BUILT_IN_SPECIAL_VARIABLES_FILENAME = "/com/javampire/openscad/skeletons/builtin_special_variables.scad";
 
     private static List<CachedModuleInfo> builtinModules;
-    private static long builtinModulesStamp = -1;
+    private static long builtinModulesContentHash = -1;
     private static List<LookupElement> builtinFunctions;
     private static List<LookupElement> builtinSpecialVariables;
     private static List<GlobalLibraryEntry> globalLibraryEntries;
@@ -494,11 +495,11 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
 
     @NotNull
     private static List<CachedModuleInfo> getBuiltinModules(@NotNull final Project project) {
-        final VirtualFile skeletonFile = findBuiltinModulesVirtualFile();
-        final long stamp = skeletonFile != null ? skeletonFile.getModificationStamp() : -1;
-        if (builtinModules == null || builtinModulesStamp != stamp) {
-            builtinModulesStamp = stamp;
+        final long contentHash = BuiltinSkeletonResources.contentHash(BUILT_IN_MODULES_FILENAME);
+        if (builtinModules == null || builtinModulesContentHash != contentHash) {
+            builtinModulesContentHash = contentHash;
             BuiltinSkeletons.clearCaches();
+            final VirtualFile skeletonFile = BuiltinSkeletonResources.findVirtualFile(BUILT_IN_MODULES_FILENAME);
             final PsiFile moduleSkeleton = skeletonFile != null
                     ? PsiManager.getInstance(project).findFile(skeletonFile)
                     : null;
@@ -515,10 +516,14 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         return builtinModules;
     }
 
+    public static void clearBuiltinModuleCompletionCache() {
+        builtinModules = null;
+        builtinModulesContentHash = -1;
+    }
+
     @Nullable
     private static VirtualFile findBuiltinModulesVirtualFile() {
-        final java.net.URL resourceUrl = OpenSCADCompletionContributor.class.getResource(BUILT_IN_MODULES_FILENAME);
-        return resourceUrl != null ? VfsUtil.findFileByURL(resourceUrl) : null;
+        return BuiltinSkeletonResources.findVirtualFile(BUILT_IN_MODULES_FILENAME);
     }
 
     private void addBuiltinFunctions(@NotNull final Project project, @NotNull final CompletionResultSet result) {
