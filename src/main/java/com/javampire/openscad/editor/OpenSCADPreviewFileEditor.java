@@ -14,6 +14,11 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.UserDataHolderBase;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileEvent;
+import com.intellij.openapi.vfs.VirtualFileListener;
+import com.intellij.openapi.vfs.VirtualFileManager;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiManager;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.jcef.JCEFHtmlPanel;
 import com.intellij.util.Alarm;
@@ -25,7 +30,6 @@ import org.cef.browser.CefMessageRouter;
 import org.cef.callback.CefQueryCallback;
 import org.cef.handler.CefMessageRouterHandlerAdapter;
 import org.jetbrains.annotations.Nls;
-import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,6 +56,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     private @Nullable JCEFHtmlPanel htmlPanel;
     private ActionToolbar previewToolbar;
     private final Alarm mySwingAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
+    private @Nullable VirtualFileListener saveListener;
 
     private OpenSCADPreviewFileEditorConfiguration editorConfig = new OpenSCADPreviewFileEditorConfiguration(this);
 
@@ -66,12 +71,14 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         this.mainPanel.addHierarchyListener(e -> {
             if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && mainPanel.isShowing()) {
                 scheduleAttachHtmlPanel();
+                scheduleRefreshIfAttached();
             }
         });
         this.mainPanel.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentShown(ComponentEvent e) {
                 scheduleAttachHtmlPanel();
+                scheduleRefreshIfAttached();
             }
 
             @Override
@@ -87,11 +94,27 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
                 this::scheduleAttachHtmlPanel,
                 ModalityState.stateForComponent(mainPanel)
         );
+        registerSaveListener();
     }
 
     private void scheduleAttachHtmlPanel() {
         mySwingAlarm.addRequest(
                 () -> attachHtmlPanel(),
+                0,
+                ModalityState.stateForComponent(getComponent())
+        );
+    }
+
+    private void scheduleRefreshIfAttached() {
+        if (htmlPanel == null) {
+            return;
+        }
+        mySwingAlarm.addRequest(
+                () -> {
+                    if (htmlPanel != null && Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
+                        refreshPreviewOnSave();
+                    }
+                },
                 0,
                 ModalityState.stateForComponent(getComponent())
         );
@@ -163,7 +186,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         final CefMessageRouter messageRouter = CefMessageRouter.create();
         messageRouter.addHandler(new CefMessageRouterHandler(), true);
         htmlPanel.getJBCefClient().getCefClient().addMessageRouter(messageRouter);
-        previewToolbar = createToolbar(htmlPanel.getComponent());
+        previewToolbar = createToolbar(mainPanel);
         mainPanel.clearMessage();
         mainPanel.add(previewToolbar.getComponent(), BorderLayout.NORTH);
         mainPanel.add(htmlPanel.getComponent(), BorderLayout.CENTER);
@@ -220,6 +243,43 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         ActionUtil.performActionDumbAwareWithCallbacks(generatePreviewAction, event);
     }
 
+    private void registerSaveListener() {
+        if (saveListener != null) {
+            return;
+        }
+        saveListener = new VirtualFileListener() {
+            @Override
+            public void contentsChanged(@NotNull final VirtualFileEvent event) {
+                if (event.isFromSave() && scadFile.equals(event.getFile())
+                        && Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
+                    refreshPreviewOnSave();
+                }
+            }
+        };
+        VirtualFileManager.getInstance().addVirtualFileListener(saveListener);
+    }
+
+    private void unregisterSaveListener() {
+        if (saveListener != null) {
+            VirtualFileManager.getInstance().removeVirtualFileListener(saveListener);
+            saveListener = null;
+        }
+    }
+
+    private void refreshPreviewOnSave() {
+        final AnAction refreshPreviewAction = new RefreshPreviewAction();
+        final AnActionEvent event = AnActionEvent.createFromDataContext(
+                ActionPlaces.UNKNOWN,
+                new Presentation(RefreshPreviewAction.TEXT),
+                SimpleDataContext.builder()
+                        .add(OpenSCADDataKeys.PREVIEW_EDITOR, OpenSCADPreviewFileEditor.this)
+                        .add(CommonDataKeys.PROJECT, project)
+                        .add(CommonDataKeys.VIRTUAL_FILE, scadFile)
+                        .build()
+        );
+        ActionUtil.performActionDumbAwareWithCallbacks(refreshPreviewAction, event);
+    }
+
     @Override
     @Nls(capitalization = Nls.Capitalization.Title)
     @NotNull
@@ -256,6 +316,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
 
     @Override
     public void dispose() {
+        unregisterSaveListener();
         detachHtmlPanel();
         final OpenSCADPreviewSite site = previewSite;
         if (site == null) {
@@ -276,7 +337,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         }), ModalityState.nonModal());
     }
 
-    private class MainPanel extends BorderLayoutPanel implements DataProvider {
+    private class MainPanel extends BorderLayoutPanel implements UiDataProvider {
         private final JLabel messageLabel = new JLabel("Loading preview...", SwingConstants.CENTER);
 
         MainPanel() {
@@ -297,10 +358,11 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         }
 
         @Override
-        public @Nullable Object getData(@NotNull @NonNls final String dataId) {
-            if (OpenSCADDataKeys.PREVIEW_EDITOR.is(dataId))
-                return OpenSCADPreviewFileEditor.this;
-            return null;
+        public void uiDataSnapshot(@NotNull final DataSink sink) {
+            sink.set(OpenSCADDataKeys.PREVIEW_EDITOR, OpenSCADPreviewFileEditor.this);
+            sink.set(CommonDataKeys.PROJECT, project);
+            sink.set(CommonDataKeys.VIRTUAL_FILE, scadFile);
+            sink.lazy(CommonDataKeys.PSI_FILE, () -> PsiManager.getInstance(project).findFile(scadFile));
         }
     }
 

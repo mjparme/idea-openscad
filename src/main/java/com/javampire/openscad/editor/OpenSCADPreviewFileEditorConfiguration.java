@@ -7,7 +7,7 @@ import java.awt.*;
 
 public class OpenSCADPreviewFileEditorConfiguration {
 
-    private Boolean autoRefresh = false;
+    private Boolean autoRefresh = true;
     private Boolean showAxis = true;
     private Boolean showGrid = true;
     private Color modelColor = JBColor.YELLOW;
