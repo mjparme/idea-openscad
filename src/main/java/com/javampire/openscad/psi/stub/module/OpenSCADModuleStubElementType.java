@@ -50,6 +50,9 @@ public class OpenSCADModuleStubElementType extends IStubElementType<OpenSCADModu
 
     @Override
     public void indexStub(@NotNull OpenSCADModuleStub stub, @NotNull IndexSink sink) {
-        sink.occurrence(MODULE, stub.getName());
+        final String name = stub.getName();
+        if (name != null) {
+            sink.occurrence(MODULE, name);
+        }
     }
 }

@@ -50,6 +50,9 @@ public class OpenSCADFunctionStubElementType extends IStubElementType<OpenSCADFu
 
     @Override
     public void indexStub(@NotNull final OpenSCADFunctionStub stub, @NotNull final IndexSink sink) {
-        sink.occurrence(FUNCTION, stub.getName());
+        final String name = stub.getName();
+        if (name != null) {
+            sink.occurrence(FUNCTION, name);
+        }
     }
 }
