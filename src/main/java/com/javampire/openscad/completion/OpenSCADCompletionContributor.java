@@ -89,10 +89,6 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
             }
             return toCallSiteAssignment();
         }
-
-        int caretOffsetAfterAssignment(final int index, final boolean positionalFirstArgumentModule) {
-            return toCallSiteAssignment(index, positionalFirstArgumentModule).length();
-        }
     }
 
     private record CachedModuleLookupObject(@NotNull String moduleName, boolean fillNamedArguments) {
@@ -776,6 +772,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         final Document document = editor.getDocument();
         final int offset = context.getTailOffset();
         if (offset < document.getTextLength() && document.getText().charAt(offset) == '(') {
+            moveCaretAfterModuleCallParentheses(context);
             return;
         }
         document.insertString(offset, "()");
@@ -787,11 +784,25 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         final Document document = editor.getDocument();
         final int offset = context.getTailOffset();
         if (offset < document.getTextLength() && document.getText().charAt(offset) == '(') {
-            editor.getCaretModel().moveToOffset(offset + 1);
+            moveCaretAfterModuleCallParentheses(context);
             return;
         }
         document.insertString(offset, "()");
-        editor.getCaretModel().moveToOffset(offset + 1);
+        editor.getCaretModel().moveToOffset(offset + 2);
+    }
+
+    private static void moveCaretAfterModuleCallParentheses(@NotNull final InsertionContext context) {
+        final Editor editor = context.getEditor();
+        final Document document = editor.getDocument();
+        final int offset = context.getTailOffset();
+        if (offset >= document.getTextLength() || document.getText().charAt(offset) != '(') {
+            return;
+        }
+        int caretOffset = offset + 1;
+        if (caretOffset < document.getTextLength() && document.getText().charAt(caretOffset) == ')') {
+            caretOffset++;
+        }
+        editor.getCaretModel().moveToOffset(caretOffset);
     }
 
     private static void insertFilledModuleCall(@NotNull final InsertionContext context,
@@ -801,19 +812,21 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         final Document document = editor.getDocument();
         final int offset = context.getTailOffset();
         final String argumentList = buildCallSiteArgumentList(parameters, positionalFirstArgument);
-        final int caretAfterFirstArgument = parameters.isEmpty()
-                ? 0
-                : parameters.get(0).caretOffsetAfterAssignment(0, positionalFirstArgument);
 
         if (offset < document.getTextLength() && document.getText().charAt(offset) == '(') {
             final int insertOffset = offset + 1;
+            final boolean hasClosingParen = insertOffset < document.getTextLength()
+                    && document.getText().charAt(insertOffset) == ')';
             document.insertString(insertOffset, argumentList);
-            editor.getCaretModel().moveToOffset(insertOffset + caretAfterFirstArgument);
+            if (!hasClosingParen) {
+                document.insertString(insertOffset + argumentList.length(), ")");
+            }
+            editor.getCaretModel().moveToOffset(offset + argumentList.length() + 2);
             return;
         }
 
         document.insertString(offset, "(" + argumentList + ")");
-        editor.getCaretModel().moveToOffset(offset + 1 + caretAfterFirstArgument);
+        editor.getCaretModel().moveToOffset(offset + argumentList.length() + 2);
     }
 
     @NotNull
