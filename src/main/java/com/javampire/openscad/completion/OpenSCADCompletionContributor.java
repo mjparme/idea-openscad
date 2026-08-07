@@ -20,8 +20,6 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.keymap.KeymapUtil;
-import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ModifiableModelsProvider;
@@ -47,11 +45,10 @@ import com.javampire.openscad.psi.OpenSCADExpr;
 import com.javampire.openscad.psi.OpenSCADFullArgDeclaration;
 import com.javampire.openscad.psi.OpenSCADFullArgDeclarationList;
 import com.javampire.openscad.psi.OpenSCADFunctionDeclaration;
-import com.javampire.openscad.psi.OpenSCADIncludeImport;
+import com.javampire.openscad.psi.OpenSCADImportUtil;
 import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
 import com.javampire.openscad.psi.OpenSCADPsiImplUtil;
 import com.javampire.openscad.psi.OpenSCADTypes;
-import com.javampire.openscad.psi.OpenSCADUseImport;
 import com.javampire.openscad.psi.OpenSCADVariableDeclaration;
 import com.javampire.openscad.references.OpenSCADResolver;
 import com.javampire.openscad.settings.OpenSCADSettings;
@@ -60,8 +57,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class OpenSCADCompletionContributor extends CompletionContributor {
@@ -392,30 +391,14 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
      * @param element Psi elements.
      */
     private void addIncludesAccessibleVariables(final CompletionResultSet result, final PsiElement element) {
-        final Module module = ModuleUtil.findModuleForPsiElement(element);
-
-        // Loop through declarations
-        final List<PsiElement> includes = PsiTreeUtil.getChildrenOfTypeAsList(element.getContainingFile(), OpenSCADIncludeImport.class);
-        for (PsiElement include : includes) {
-            // Get relative paths
-            final String importPath = OpenSCADPsiImplUtil.getPresentation(include).getPresentableText();
-            if (importPath == null) continue;
-
-            // Get psi file
-            final List<PsiFile> psiFiles;
-            if (module != null) {
-                psiFiles = OpenSCADResolver.findModuleContentFile(module, importPath);
-            } else {
-                psiFiles = OpenSCADResolver.findProjectLibrary(element.getProject(), importPath);
-            }
-            if (psiFiles.isEmpty()) continue;
-
-            // Get all variable declaration
-            final List<OpenSCADVariableDeclaration> varDeclarations = PsiTreeUtil.getChildrenOfTypeAsList(psiFiles.get(0), OpenSCADVariableDeclaration.class);
-
-            // Add all include variables
-            result.addAllElements(convertToLookupElements(varDeclarations, _FROM_ + importPath));
-        }
+        final List<LookupElement> importedVariables = new ArrayList<>();
+        final Set<PsiFile> visitedFiles = new HashSet<>();
+        OpenSCADImportUtil.collectIncludedVariables(
+                element.getContainingFile(),
+                visitedFiles,
+                (variable, tailText) -> importedVariables.addAll(convertToLookupElements(List.of(variable), tailText))
+        );
+        result.addAllElements(importedVariables);
     }
 
     /**
@@ -564,51 +547,27 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
     private void addLocalLibrariesModulesAndFunctions(final CompletionResultSet result,
                                                       final PsiElement element,
                                                       final boolean fillNamedArguments) {
-        result.addAllElements(addLocalLibrariesModulesAndFunctions(new ArrayList<>(), element.getContainingFile(), fillNamedArguments));
+        final List<LookupElement> imports = new ArrayList<>();
+        final Set<PsiFile> visitedFiles = new HashSet<>();
+        OpenSCADImportUtil.collectImportedModulesAndFunctions(
+                element.getContainingFile(),
+                visitedFiles,
+                symbol -> imports.addAll(toImportedSymbolLookupElements(symbol, fillNamedArguments))
+        );
+        result.addAllElements(imports);
     }
 
-    /**
-     * Add local libraries recursively starting from file.
-     *
-     * @param addedFiles File already added, to avoid infinite loops, in case of cyclic dependencies.
-     * @param file       File to analyze.
-     * @return List of modules and functions lookups.
-     */
-    private List<LookupElement> addLocalLibrariesModulesAndFunctions(final List<PsiFile> addedFiles,
-                                                                     final PsiFile file,
-                                                                     final boolean fillNamedArguments) {
-        final List<LookupElement> imports = new ArrayList<>();
-
-        // Loop through declarations
-        final List<PsiElement> declarations = new ArrayList<>();
-        declarations.addAll(PsiTreeUtil.getChildrenOfTypeAsList(file, OpenSCADUseImport.class));
-        declarations.addAll(PsiTreeUtil.getChildrenOfTypeAsList(file, OpenSCADIncludeImport.class));
-        final Module module = ModuleUtil.findModuleForFile(file.getOriginalFile());
-        for (PsiElement declaration : declarations) {
-            // Get relative paths
-            final String importPath = OpenSCADPsiImplUtil.getPresentation(declaration).getPresentableText();
-            if (importPath == null) continue;
-
-            // Get psi file
-            final List<PsiFile> psiFiles;
-            if (module != null) {
-                psiFiles = OpenSCADResolver.findModuleContentFile(module, importPath);
-            } else {
-                psiFiles = OpenSCADResolver.findProjectLibrary(file.getProject(), importPath);
-            }
-            if (psiFiles.isEmpty()) continue;
-            final PsiFile dependency = psiFiles.get(0);
-
-            imports.addAll(getFunctions(dependency, _FROM_ + importPath));
-            imports.addAll(getModules(dependency, _FROM_ + importPath, fillNamedArguments));
-
-            // Recursive call to get sub dependencies
-            if (!addedFiles.contains(dependency)) {
-                addedFiles.add(dependency);
-                imports.addAll(addLocalLibrariesModulesAndFunctions(addedFiles, dependency, fillNamedArguments));
-            }
+    @NotNull
+    private List<LookupElement> toImportedSymbolLookupElements(@NotNull final OpenSCADImportUtil.ImportedSymbol symbol,
+                                                               final boolean fillNamedArguments) {
+        final PsiElement declaration = symbol.declaration();
+        if (declaration instanceof OpenSCADModuleDeclaration module) {
+            return convertModuleToLookupElements(List.of(module), symbol.sourceTailText(), fillNamedArguments);
         }
-        return imports;
+        if (declaration instanceof OpenSCADFunctionDeclaration function) {
+            return convertToLookupElements(List.of(function), symbol.sourceTailText());
+        }
+        return List.of();
     }
 
     private void addGlobalLibrariesModulesAndFunctions(final CompletionResultSet result,
@@ -650,11 +609,15 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
 
     private <T extends PsiElement> List<LookupElement> convertToLookupElements(final List<T> elements, final String tailText) {
         return elements.stream()
-                .map(OpenSCADPsiImplUtil::getPresentation)
-                .map(presentation -> {
+                .map(element -> {
+                    final ItemPresentation presentation = OpenSCADPsiImplUtil.getPresentation(element);
                     final String text = presentation.getPresentableText();
-                    if (text == null) return null;
-                    LookupElementBuilder builder = LookupElementBuilder.create(text).withIcon(presentation.getIcon(true));
+                    if (text == null) {
+                        return null;
+                    }
+                    LookupElementBuilder builder = LookupElementBuilder
+                            .create(text)
+                            .withIcon(presentation.getIcon(true));
                     if (tailText != null) {
                         builder = builder.appendTailText(tailText, true);
                     }

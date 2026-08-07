@@ -3,6 +3,7 @@ package com.javampire.openscad.completion;
 import com.intellij.codeInsight.completion.CompletionType;
 import com.intellij.codeInsight.lookup.Lookup;
 import com.intellij.codeInsight.lookup.LookupElement;
+import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.javampire.openscad.psi.BuiltinSkeletons;
 import com.javampire.openscad.psi.OpenSCADArgDeclaration;
@@ -10,6 +11,7 @@ import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
 import com.javampire.openscad.settings.OpenSCADSettings;
 
 import java.util.List;
+import java.util.Objects;
 
 public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
 
@@ -246,6 +248,83 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         myFixture.checkResult("rotate(" + firstDefault + ")");
     }
 
+    public void testUseImportProvidesModuleAndFunctionCompletionsWithSource() {
+        myFixture.configureByText("use_lib.scad", """
+                lib_var = 1;
+                module libModule() { cube(1); }
+                function libFunction(x) = x;
+                """);
+        myFixture.configureByText("use_main.scad", """
+                use <use_lib.scad>
+                lib<caret>
+                """);
+        assertContainsCompletion("libModule");
+        assertContainsCompletion("libFunction");
+        assertCompletionHasTailText("libModule", " from use_lib.scad");
+        assertCompletionHasTailText("libFunction", " from use_lib.scad");
+        assertDoesNotContainCompletion("lib_var");
+    }
+
+    public void testIncludeImportProvidesVariablesModulesAndFunctionsWithSource() {
+        myFixture.configureByText("include_lib.scad", """
+                lib_var = 1;
+                module libModule() { cube(1); }
+                function libFunction(x) = x;
+                """);
+        myFixture.configureByText("include_main.scad", """
+                include <include_lib.scad>
+                lib<caret>
+                """);
+        assertContainsCompletion("libModule");
+        assertContainsCompletion("libFunction");
+        assertContainsCompletion("lib_var");
+        assertCompletionHasTailText("lib_var", " from include_lib.scad");
+    }
+
+    public void testNestedUseDoesNotPropagateToBaseFile() {
+        myFixture.configureByText("nested_use_nested.scad", """
+                module nestedModule() { sphere(1); }
+                """);
+        myFixture.configureByText("nested_use_middle.scad", """
+                use <nested_use_nested.scad>
+                """);
+        myFixture.configureByText("nested_use_main.scad", """
+                use <nested_use_middle.scad>
+                nest<caret>
+                """);
+        assertDoesNotContainCompletion("nestedModule");
+    }
+
+    public void testTransitiveIncludeProvidesNestedVariables() {
+        myFixture.configureByText("transitive_utils.scad", """
+                utils_var = 42;
+                """);
+        myFixture.configureByText("transitive_lib.scad", """
+                include <transitive_utils.scad>
+                """);
+        myFixture.configureByText("transitive_main.scad", """
+                include <transitive_lib.scad>
+                <caret>
+                """);
+        assertContainsCompletion("utils_var");
+        assertCompletionHasTailText("utils_var", " from transitive_utils.scad");
+    }
+
+    public void testIncludeBringsInModulesFromUsedDependency() {
+        myFixture.configureByText("include_use_nested.scad", """
+                module nestedModule() { sphere(1); }
+                """);
+        myFixture.configureByText("include_use_lib.scad", """
+                use <include_use_nested.scad>
+                """);
+        myFixture.configureByText("include_use_main.scad", """
+                include <include_use_lib.scad>
+                <caret>
+                """);
+        assertContainsCompletion("nestedModule");
+        assertCompletionHasTailText("nestedModule", " from include_use_nested.scad");
+    }
+
     private void selectLookupItem(LookupElement item) {
         final var lookup = myFixture.getLookup();
         assertNotNull(lookup);
@@ -304,5 +383,40 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         final List<String> variants = myFixture.getLookupElementStrings();
         assertNotNull(variants);
         assertTrue("Expected completion to include " + moduleName + " but got: " + variants, variants.contains(moduleName));
+    }
+
+    private void assertContainsCompletion(String name) {
+        final LookupElement[] items = myFixture.complete(CompletionType.BASIC);
+        assertNotNull("No completion items returned", items);
+        for (LookupElement item : items) {
+            if (name.equals(item.getLookupString())) {
+                return;
+            }
+        }
+        fail("Expected completion to include " + name + " but got: " + myFixture.getLookupElementStrings());
+    }
+
+    private void assertDoesNotContainCompletion(String name) {
+        final LookupElement[] items = myFixture.complete(CompletionType.BASIC);
+        assertNotNull(items);
+        for (LookupElement item : items) {
+            if (name.equals(item.getLookupString())) {
+                fail("Expected completion to exclude " + name + " but got: " + myFixture.getLookupElementStrings());
+            }
+        }
+    }
+
+    private void assertCompletionHasTailText(String name, String expectedTailText) {
+        final LookupElement[] items = myFixture.complete(CompletionType.BASIC);
+        assertNotNull(items);
+        for (LookupElement item : items) {
+            if (name.equals(item.getLookupString())) {
+                final LookupElementPresentation presentation = LookupElementPresentation.renderElement(item);
+                assertTrue("Expected tail text '" + expectedTailText + "' for " + name,
+                        Objects.toString(presentation.getTailText(), "").contains(expectedTailText));
+                return;
+            }
+        }
+        fail("Expected completion to include " + name + " but got: " + myFixture.getLookupElementStrings());
     }
 }
