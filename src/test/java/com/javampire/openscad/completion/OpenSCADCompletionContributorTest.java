@@ -325,6 +325,18 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         assertCompletionHasTailText("nestedModule", " from include_use_nested.scad");
     }
 
+    public void testParentRelativeUseImportProvidesCompletions() {
+        myFixture.addFileToProject("lib/cubes.scad", "module roundedCube() { cube(1); }");
+        myFixture.addFileToProject("fiber-arts/thread-holder/main.scad", """
+                use <../../lib/cubes.scad>
+                
+                """);
+        myFixture.configureFromTempProjectFile("fiber-arts/thread-holder/main.scad");
+        myFixture.getEditor().getCaretModel().moveToOffset(myFixture.getEditor().getDocument().getTextLength());
+        assertContainsCompletion("roundedCube");
+        assertCompletionHasTailText("roundedCube", " from ../../lib/cubes.scad");
+    }
+
     private void selectLookupItem(LookupElement item) {
         final var lookup = myFixture.getLookup();
         assertNotNull(lookup);

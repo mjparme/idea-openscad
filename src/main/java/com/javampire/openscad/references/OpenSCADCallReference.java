@@ -20,6 +20,7 @@ import com.javampire.openscad.psi.OpenSCADVariableRefExpr;
 import com.javampire.openscad.psi.OpenSCADModuleObjNameRef;
 import com.javampire.openscad.psi.OpenSCADModuleOpNameRef;
 import com.javampire.openscad.psi.OpenSCADFunctionNameRef;
+import com.javampire.openscad.psi.OpenSCADImportUtil;
 import com.javampire.openscad.psi.OpenSCADPsiImplUtil;
 import com.javampire.openscad.psi.stub.function.OpenSCADFunctionIndex;
 import com.javampire.openscad.psi.stub.module.OpenSCADModuleIndex;
@@ -108,6 +109,10 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
             }
             return new ResolveResult[]{parameterResults.get(parameterResults.size() - 1)};
         }
+        final OpenSCADVariableDeclaration includedVariable = OpenSCADImportUtil.findIncludedVariable(myElement, referencedName);
+        if (includedVariable != null) {
+            return new ResolveResult[]{new PsiElementResolveResult(includedVariable)};
+        }
         Project project = myElement.getProject();
         final OpenSCADReferenceResolver resolver = myElement.getReferenceResolver();
         if (resolver == null) {
@@ -151,6 +156,10 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
         if (scopedResults.length > 0) {
             return scopedResults;
         }
+        final OpenSCADModuleDeclaration importedModule = OpenSCADImportUtil.findImportedModule(myElement, referencedName);
+        if (importedModule != null) {
+            return new ResolveResult[]{new PsiElementResolveResult(importedModule)};
+        }
         return resolveIndexedReferences(OpenSCADModuleIndex.getInstance());
     }
 
@@ -161,6 +170,10 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
         final ResolveResult[] scopedResults = toScopedResults(accessibleDeclarations);
         if (scopedResults.length > 0) {
             return scopedResults;
+        }
+        final OpenSCADFunctionDeclaration importedFunction = OpenSCADImportUtil.findImportedFunction(myElement, referencedName);
+        if (importedFunction != null) {
+            return new ResolveResult[]{new PsiElementResolveResult(importedFunction)};
         }
         return resolveIndexedReferences(OpenSCADFunctionIndex.getInstance());
     }

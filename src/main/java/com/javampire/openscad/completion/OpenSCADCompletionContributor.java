@@ -297,7 +297,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                         ProgressManager.checkCanceled();
 
                         // Add all accessible variables in includes
-                        addIncludesAccessibleVariables(result, elementPosition);
+                        addIncludesAccessibleVariables(result, parameters.getOriginalFile());
                         ProgressManager.checkCanceled();
 
                         // Add local custom modules
@@ -315,7 +315,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                         ProgressManager.checkCanceled();
 
                         // Add declared library methods and functions
-                        addLocalLibrariesModulesAndFunctions(result, elementPosition, fillNamedArgumentsOnPrimaryCompletion);
+                        addLocalLibrariesModulesAndFunctions(result, parameters.getOriginalFile(), fillNamedArgumentsOnPrimaryCompletion);
                         ProgressManager.checkCanceled();
 
                         if (!parameters.isAutoPopup() && parameters.getInvocationCount() >= 1) {
@@ -390,11 +390,11 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
      * @param result  Result set.
      * @param element Psi elements.
      */
-    private void addIncludesAccessibleVariables(final CompletionResultSet result, final PsiElement element) {
+    private void addIncludesAccessibleVariables(final CompletionResultSet result, final PsiFile file) {
         final List<LookupElement> importedVariables = new ArrayList<>();
         final Set<PsiFile> visitedFiles = new HashSet<>();
         OpenSCADImportUtil.collectIncludedVariables(
-                element.getContainingFile(),
+                file,
                 visitedFiles,
                 (variable, tailText) -> importedVariables.addAll(convertToLookupElements(List.of(variable), tailText))
         );
@@ -545,12 +545,12 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
      * @param element Current element.
      */
     private void addLocalLibrariesModulesAndFunctions(final CompletionResultSet result,
-                                                      final PsiElement element,
+                                                      final PsiFile file,
                                                       final boolean fillNamedArguments) {
         final List<LookupElement> imports = new ArrayList<>();
         final Set<PsiFile> visitedFiles = new HashSet<>();
         OpenSCADImportUtil.collectImportedModulesAndFunctions(
-                element.getContainingFile(),
+                file,
                 visitedFiles,
                 symbol -> imports.addAll(toImportedSymbolLookupElements(symbol, fillNamedArguments))
         );
