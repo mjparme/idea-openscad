@@ -77,17 +77,62 @@ public final class OpenSCADImportUtil {
     public static List<PsiFile> resolveImportFiles(@NotNull final PsiFile contextFile, @NotNull final String importPath) {
         final Module module = ModuleUtil.findModuleForFile(contextFile.getOriginalFile());
         if (module != null) {
-            List<PsiFile> files = OpenSCADResolver.findModuleLibrary(module, importPath);
+            List<PsiFile> files = OpenSCADResolver.findModuleLibrary(contextFile, importPath);
             if (files.isEmpty()) {
-                files = OpenSCADResolver.findModuleContentFile(module, importPath);
+                files = OpenSCADResolver.findModuleContentFile(contextFile, importPath);
             }
             return files;
         }
-        List<PsiFile> files = OpenSCADResolver.findProjectLibrary(contextFile.getProject(), importPath);
+        List<PsiFile> files = OpenSCADResolver.findProjectLibrary(contextFile, importPath);
         if (files.isEmpty()) {
-            files = OpenSCADResolver.findProjectContentFile(contextFile.getProject(), importPath);
+            files = OpenSCADResolver.findProjectContentFile(contextFile, importPath);
         }
         return files;
+    }
+
+    @Nullable
+    public static OpenSCADModuleDeclaration findImportedModule(@NotNull final PsiElement context, @NotNull final String name) {
+        final List<OpenSCADModuleDeclaration> matches = new ArrayList<>();
+        collectImportedModulesAndFunctions(
+                context.getContainingFile(),
+                new java.util.HashSet<>(),
+                symbol -> {
+                    if (symbol.declaration() instanceof OpenSCADModuleDeclaration module && name.equals(module.getName())) {
+                        matches.add(module);
+                    }
+                }
+        );
+        return matches.isEmpty() ? null : matches.get(0);
+    }
+
+    @Nullable
+    public static OpenSCADFunctionDeclaration findImportedFunction(@NotNull final PsiElement context, @NotNull final String name) {
+        final List<OpenSCADFunctionDeclaration> matches = new ArrayList<>();
+        collectImportedModulesAndFunctions(
+                context.getContainingFile(),
+                new java.util.HashSet<>(),
+                symbol -> {
+                    if (symbol.declaration() instanceof OpenSCADFunctionDeclaration function && name.equals(function.getName())) {
+                        matches.add(function);
+                    }
+                }
+        );
+        return matches.isEmpty() ? null : matches.get(0);
+    }
+
+    @Nullable
+    public static OpenSCADVariableDeclaration findIncludedVariable(@NotNull final PsiElement context, @NotNull final String name) {
+        final List<OpenSCADVariableDeclaration> matches = new ArrayList<>();
+        collectIncludedVariables(
+                context.getContainingFile(),
+                new java.util.HashSet<>(),
+                (variable, tailText) -> {
+                    if (name.equals(variable.getName())) {
+                        matches.add(variable);
+                    }
+                }
+        );
+        return matches.isEmpty() ? null : matches.get(0);
     }
 
     @NotNull

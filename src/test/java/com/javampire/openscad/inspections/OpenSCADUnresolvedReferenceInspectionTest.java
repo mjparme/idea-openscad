@@ -83,6 +83,16 @@ public class OpenSCADUnresolvedReferenceInspectionTest extends BasePlatformTestC
         assertFalse(hasErrorOn(myFixture.doHighlighting(), "localVar"));
     }
 
+    public void testUsedModuleFromParentRelativePathResolves() {
+        myFixture.addFileToProject("lib/cubes.scad", "module roundedCube() { cube(1); }");
+        myFixture.addFileToProject("fiber-arts/thread-holder/main.scad", """
+                use <../../lib/cubes.scad>
+                roundedCube();
+                """);
+        myFixture.configureFromTempProjectFile("fiber-arts/thread-holder/main.scad");
+        assertFalse(hasErrorOn(myFixture.doHighlighting(), "roundedCube"));
+    }
+
     private static boolean hasErrorOn(List<HighlightInfo> highlights, String text) {
         return highlights.stream()
                 .filter(info -> text.equals(info.getText()))
