@@ -160,7 +160,8 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
 
         // No history for the file, getting the last known layout, whatever the file
         final String lastUsed = PropertiesComponent.getInstance().getValue("OpenSCADTextEditorWithPreviewLayout");
-        return TextEditorWithPreview.Layout.fromId(lastUsed, TextEditorWithPreview.Layout.SHOW_EDITOR_AND_PREVIEW) != SHOW_EDITOR;
+        // Layout ids match TextEditorWithPreview.Layout: "Editor only", "Preview only", "Editor and Preview"
+        return lastUsed == null || !"Editor only".equals(lastUsed);
     }
 
     public Boolean isPreviewShown() {
