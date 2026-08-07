@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 25
@@ -63,7 +63,7 @@ jobs:
       changelog: ${{ steps.properties.outputs.changelog }}
       artifact: ${{ steps.properties.outputs.artifact }}
     steps:
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 25
@@ -100,12 +100,12 @@ jobs:
       - name: Build Plugin
         run: ./gradlew buildPlugin
 
-      # Cache Plugin distribution
-      - name: Setup Plugin distribution Cache
-        uses: actions/cache/save@v4
+      - name: Upload plugin distribution
+        uses: actions/upload-artifact@v4
         with:
-          path: ./build/distributions
-          key: ${{ runner.os }}-gradle-distribution-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          name: plugin-distribution
+          path: build/distributions/*.zip
+          if-no-files-found: error
 
   # Prepare a pre-release for GitHub Releases page for the manual verification
   # Use manual promote release workflow to create final release
@@ -117,12 +117,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Cache Plugin distribution
-      - name: Setup Plugin distribution Cache
-        uses: actions/cache/restore@v4
+      - name: Download plugin distribution
+        uses: actions/download-artifact@v4
         with:
-          path: ./build/distributions
-          key: ${{ runner.os }}-gradle-distribution-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          name: plugin-distribution
+          path: build/distributions
 
       # Delete existing release if needed
       - name: Delete previous release
