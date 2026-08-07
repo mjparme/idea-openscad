@@ -3,7 +3,7 @@ package com.javampire.openscad.settings;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
-import com.intellij.ide.IdeBundle;
+import com.javampire.openscad.OpenSCADBundle;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
@@ -142,7 +142,7 @@ public class OpenSCADSettingsStartupActivity {
         );
         previewNotification.addAction(
                 NotificationAction.createSimpleExpiring(
-                        IdeBundle.message("sys.health.acknowledge.action"),
+                        OpenSCADBundle.message("notification.do.not.ask.again"),
                         () -> PropertiesComponent.getInstance(project).setValue(DO_NOT_ASK_AGAIN_ALLOW_PREVIEW_ID, true)
                 )
         );
