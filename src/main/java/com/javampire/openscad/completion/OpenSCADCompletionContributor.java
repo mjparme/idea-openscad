@@ -263,10 +263,21 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         @Override
         protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
 
-            final Project project = parameters.getOriginalFile().getProject();
-            final PsiElement elementPosition = parameters.getPosition();
+                        final Project project = parameters.getOriginalFile().getProject();
+                        final PsiElement elementPosition = parameters.getPosition();
 
-            // Module/function parameter lists use ARG_DECLARATION nodes; offering call-site symbols there is wrong.
+                        if (OpenSCADImportPathCompletionUtil.findImportPathRefAtOffset(
+                            parameters.getOriginalFile(), parameters.getOffset()) != null) {
+                            OpenSCADImportPathCompletionContributor.addImportPathCompletions(parameters, result);
+                            return;
+                        }
+                        if (OpenSCADImportPathCompletionUtil.isInsideIncompleteImportPath(
+                            parameters.getOriginalFile(), parameters.getOffset())) {
+                            OpenSCADImportPathCompletionContributor.addImportPathCompletions(parameters, result);
+                            return;
+                        }
+
+                        // Module/function parameter lists use ARG_DECLARATION nodes; offering call-site symbols there is wrong.
             if (OpenSCADTypes.ARG_DECLARATION == elementPosition.getParent().getNode().getElementType()) {
                 return;
             }
@@ -295,6 +306,9 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
             }
 
             final boolean fillNamedArgumentsOnPrimaryCompletion = OpenSCADSettings.getInstance().isFillNamedArgumentsOnModuleCompletion();
+
+            OpenSCADKeywordCompletionContributor.addKeywordCompletions(parameters, result);
+            ProgressManager.checkCanceled();
 
             // Add all accessible variables in the current file
             addAccessibleVariables(result, elementPosition, null);
