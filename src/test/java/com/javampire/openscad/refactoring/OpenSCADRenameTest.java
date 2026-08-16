@@ -187,6 +187,39 @@ public class OpenSCADRenameTest extends BasePlatformTestCase {
         assertLibFileEquals(libFile, "include_variable_lib_after.scad");
     }
 
+  /**
+   * Redeclaring an included variable in the main file shadows the lib definition.
+   * Rename must update only the local declaration, not the included file.
+   */
+    public void testRenameRedeclaredIncludedVariableInMainDoesNotRenameLibFile() throws Exception {
+        final var libFile = myFixture.addFileToProject("include_variable_shadow_lib_before.scad", loadFile("include_variable_shadow_lib_before.scad"));
+        myFixture.addFileToProject("include_variable_shadow_main_before.scad", loadFile("include_variable_shadow_main_before.scad"));
+        myFixture.configureFromTempProjectFile("include_variable_shadow_main_before.scad");
+
+        OpenSCADVariableDeclaration localVar = PsiTreeUtil.findChildOfType(myFixture.getFile(), OpenSCADVariableDeclaration.class);
+        assertNotNull(localVar);
+        assertEquals("testVar", localVar.getName());
+        myFixture.renameElement(localVar, "renamedVar");
+        myFixture.checkResultByFile("include_variable_shadow_main_after.scad");
+        assertLibFileEquals(libFile, "include_variable_shadow_lib_before.scad");
+    }
+
+    public void testRedeclaredIncludedVariableResolvesToLocalDeclaration() throws Exception {
+        final var libFile = myFixture.addFileToProject("include_variable_shadow_lib_before.scad", loadFile("include_variable_shadow_lib_before.scad"));
+        myFixture.addFileToProject("include_variable_shadow_main_before.scad", loadFile("include_variable_shadow_main_before.scad"));
+        myFixture.configureFromTempProjectFile("include_variable_shadow_main_before.scad");
+
+        OpenSCADVariableDeclaration localVar = PsiTreeUtil.findChildOfType(myFixture.getFile(), OpenSCADVariableDeclaration.class);
+        assertNotNull(localVar);
+        OpenSCADVariableDeclaration libVar = PsiTreeUtil.findChildOfType(libFile, OpenSCADVariableDeclaration.class);
+        assertNotNull(libVar);
+        assertNotSame(localVar, libVar);
+
+        OpenSCADRenameProcessor processor = new OpenSCADRenameProcessor();
+        PsiElement toRename = processor.substituteElementToRename(localVar, null);
+        assertSame(localVar, toRename);
+    }
+
     public void testRenameIncludedVariableFromReferenceInMainFile() throws Exception {
         final var libFile = myFixture.addFileToProject("include_variable_lib_before.scad", loadFile("include_variable_lib_before.scad"));
         myFixture.addFileToProject("include_variable_main_before.scad", loadFile("include_variable_main_before.scad"));
