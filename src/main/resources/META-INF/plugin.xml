@@ -1,6 +1,6 @@
 <idea-plugin>
     <id>com.mjparme.idea-openscad</id>
-    <name>OpenSCAD Language Support</name>
+    <name>OpenSCAD Support</name>
     <vendor url="https://github.com/mjparme/idea-openscad">Michael Parmeley</vendor>
 
     <description><![CDATA[
@@ -38,7 +38,6 @@
         <postStartupActivity implementation="com.javampire.openscad.settings.OpenSCADSettingsProjectActivity"/>
         <postStartupActivity implementation="com.javampire.openscad.psi.BuiltinSkeletonProjectActivity"/>
 
-        <fileEditorProvider implementation="com.javampire.openscad.editor.OpenSCADTextEditorWithPreviewProvider"/>
         <lang.syntaxHighlighterFactory language="OpenSCAD" implementationClass="com.javampire.openscad.highlighting.OpenSCADSyntaxHighlighterFactory"/>
         <annotator language="OpenSCAD" implementationClass="com.javampire.openscad.highlighting.OpenSCADAnnotator"/>
         <localInspection language="OpenSCAD"
@@ -96,6 +95,6 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
-    <depends optional="true">com.intellij.modules.jcef</depends>
+    <depends optional="true" config-file="plugin-jcef.xml">com.intellij.modules.jcef</depends>
 
 </idea-plugin>

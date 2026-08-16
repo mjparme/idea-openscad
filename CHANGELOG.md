@@ -8,9 +8,13 @@
 
 ### Changed
 
+- Marketplace display name: **OpenSCAD Support** (avoids conflict with the original plugin listing; Marketplace disallows "IntelliJ" in plugin names)
+
 ### Removed
 
 ### Fixed
+
+- Optional JCEF dependency now uses a `config-file` descriptor for split-preview extensions
 
 ## 1.0.0
 

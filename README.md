@@ -1,7 +1,7 @@
 ![Workflow build](https://github.com/mjparme/idea-openscad/actions/workflows/build.yml/badge.svg)
 
 <!-- Plugin description -->
-# OpenSCAD Language Support for IntelliJ Platform
+# OpenSCAD Support
 
 [OpenSCAD](https://openscad.org/index.html) language plugin for IntelliJ Platform IDEs (Idea, PyCharm, etc). It provides :
 
@@ -94,7 +94,7 @@ The OpenSCAD color scheme can be loaded in *Settings* -> *Editor* -> *Color Sche
 
 ### Shortcuts
 
-You can add shortcuts in *Settings* -> *Keymap* -> *Plugins* -> *OpenSCAD Language Support*.
+You can add shortcuts in *Settings* -> *Keymap* -> *Plugins* -> *OpenSCAD Support*.
 
 ## Preview panel
 
