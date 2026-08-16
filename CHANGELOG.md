@@ -14,22 +14,47 @@
 
 ## 1.0.0
 
+Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the unmaintained `com.javampire.idea-openscad` listing on JetBrains Marketplace).
+
 ### Added
 
 - Rename support for modules, functions, and scoped variables
+- Cross-file rename for file-scope variables via `include` and for modules/functions via `use`
 - Semantic syntax highlighting for module, function, and variable names
-- Shift+F6 rename from module declarations and call sites
+- Semantic highlighting for module and function parameters
+- Shift+F6 rename from declarations and call sites
+- Unresolved reference inspection for modules, functions, and variables
+- Module and function parameter resolution in bodies and at call sites
+- Scoped completion and navigation for inner modules and functions
+- IDE support for OpenSCAD special variables (e.g. `$preview`, `$fn`)
+- `use` / `include`-aware completions with source file attribution
+- Module completion: insert parentheses, optional named-argument fill with defaults, caret placed after parentheses
+- Deferred global library completions until manual Ctrl+Space
+- Live template context and bundled starter templates
+- OpenSCAD syntax colors in Default, Darcula, and Islands Dark editor schemes
 
 ### Changed
 
-- Forked from upstream as `com.mjparme.idea-openscad` for continued maintenance and JetBrains Marketplace release
-- Upgraded build to IntelliJ Platform 2026.2
+- Forked from [ldenisey/idea-openscad](https://github.com/ldenisey/idea-openscad) for continued maintenance and JetBrains Marketplace release under plugin ID `com.mjparme.idea-openscad`
+- Upgraded build to IntelliJ Platform 2026.2 and IntelliJ Platform Gradle Plugin 2.x (Kotlin DSL)
 - Updated default syntax highlighting colors for identifiers, module names, function names, and variable names
+- Preview auto-refresh on file save; preview toolbar action fixes
+- Unified `echo` expression arguments with shared `arg_assignment_list` grammar
+- CI: dedicated verify-plugin workflow, GitHub Actions cache and setup-java updates
 
 ### Fixed
 
+- OpenSCAD split preview on modern IntelliJ platform (JCEF)
+- JCEF preview detection under read lock on IntelliJ 2026.2 (defer check instead of caching false when the read lock is unavailable)
+- Startup and preview initialization no longer perform blocking PSI/VFS work on the EDT at project load (ProjectActivity, deferred attach, write-safe preview site creation)
+- Preview toolbar actions resolved via `UiDataProvider` with lazy `PSI_FILE` so toolbar updates do not block the UI thread
 - Module rename from declarations and cross-file ambiguous names
+- Cross-file rename for file-scope variables included from other files
 - Shift+F6 rename handler chooser dialog conflict with platform inplace rename
+- Relative `use` / `include` path resolution and imported symbol resolution
+- Builtin module parameter resolution and positional argument completion
+- Stub index crash when a declaration name is null
+- Plugin Verifier failures by removing internal API usages
 
 ## 2.4.0
 

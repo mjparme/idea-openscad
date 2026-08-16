@@ -6,9 +6,10 @@
 [OpenSCAD](https://openscad.org/index.html) language plugin for IntelliJ Platform IDEs (Idea, PyCharm, etc). It provides :
 
 * Preview split panel, based on [OpenSCAD](https://openscad.org/index.html) rendering
-* Syntax highlighting
-* Code completion
-* Code navigation
+* Syntax highlighting and semantic highlighting for modules, functions, variables, and parameters
+* Code completion (built-in modules, project symbols, `use` / `include`, and global libraries)
+* Code navigation and rename for modules, functions, and scoped variables (including cross-file `use` / `include`)
+* Unresolved reference inspection
 * Formatting
 * Code folding support
 * Structure views
@@ -16,8 +17,7 @@
 * Color picking
 * Actions for opening OpenSCAD and exporting model
 * Color scheme close to the built-in OpenSCAD editor
-* Rename support for modules, functions, and scoped variables
-* Semantic highlighting for module, function, and variable names
+* Live templates
 <!-- Plugin description end -->
 
 ## Fork
@@ -36,10 +36,51 @@ The plugin will search for an OpenSCAD executable in standard installation paths
 
 Go in *Settings* -> *Languages & Frameworks* -> *OpenSCAD* to manually set your installation path and activate/deactivate the preview editor.
 
+![OpenSCAD settings: executable path, preview editor, and module completion options](docs/screenshots/settings-languages-frameworks-openscad.png)
+
+On macOS, the default install location is usually:
+
+```text
+/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD
+```
+
+(MacPorts installs may use `/Applications/MacPorts/OpenSCAD.app/Contents/MacOS/OpenSCAD` instead.)
+
+### Code completion
+
+Completion behavior depends on where symbols come from:
+
+* **Built-in OpenSCAD modules and functions** (e.g. `cube`, `translate`, `union`) — included when you type or invoke completion normally.
+* **Symbols from `use` and `include` in your project** — included automatically, with tail text showing the source file.
+* **Modules and functions from OpenSCAD global library paths** — **not** shown in the automatic completion popup. Press **Ctrl+Space** (or your IDE’s *Code Completion* shortcut) explicitly to load them. Scanning every `.scad` file under library paths is deferred for performance; the completion list may show a hint to press the shortcut for global libraries.
+
+After an explicit completion invoke, modules from library folders (e.g. MCAD) appear with the library path in tail text:
+
+![Module completion from OpenSCAD global library paths after Ctrl+Space](docs/screenshots/global-library-module-completion.png)
+
+Module completion can insert parentheses and optionally fill named arguments with defaults (*Settings* -> *Languages & Frameworks* -> *OpenSCAD* — see below).
+
+### Module completion
+
+*Settings* -> *Languages & Frameworks* -> *OpenSCAD* -> **Fill named arguments on module completion**
+
+| Setting | Completion list | On accept |
+|--------|------------------|-----------|
+| **Off** (default) | Each module with parameters appears twice: `myModule` and `myModule (with args)` | `myModule` inserts `myModule()` (or `myModule(arg = default)` for positional-first builtins). Choose `(with args)` to insert a filled call with named arguments and defaults. |
+| **On** | Only one entry per module (no `(with args)` variant) | Always inserts a filled call — parentheses plus named arguments, using default values when the module defines them. |
+
+With **Fill named arguments on module completion** off, modules from a `use` file show both entries (tail text indicates the source file):
+
+![Module completion showing plain and (with args) variants from an included library](docs/screenshots/module-completion-with-args-variant.png)
+
+Applies to built-in modules, project modules, and modules from `use` / `include` / global libraries.
+
 ### Global libraries
 
-The libraries configured in OpenSCAD are automatically added as libraries in your IDE.
-You will be able to access them through navigation and code completion with take them into account.
+OpenSCAD library paths configured in OpenSCAD are added as IDE libraries at startup.
+You can navigate to symbols in those libraries and complete them after an explicit **Ctrl+Space** (see *Code completion* above).
+
+Project `use` / `include` files are resolved separately and appear in completion without that extra step.
 
 ### Formatting
 
@@ -49,6 +90,8 @@ The formatting options are located in *Settings* -> *Editor* -> *Code Style* -> 
 
 The OpenSCAD color scheme can be loaded in *Settings* -> *Editor* -> *Color Scheme* -> *OpenSCAD* -> *Scheme* -> *OpenSCAD.Default*.
 
+![OpenSCAD color scheme settings for syntax and semantic highlighting](docs/screenshots/color-scheme-settings.png)
+
 ### Shortcuts
 
 You can add shortcuts in *Settings* -> *Keymap* -> *Plugins* -> *OpenSCAD Language Support*.
@@ -56,6 +99,8 @@ You can add shortcuts in *Settings* -> *Keymap* -> *Plugins* -> *OpenSCAD Langua
 ## Preview panel
 
 The plugin split preview editor will allow you to modify your code and easily check its result in the IDE.
+
+![Split preview editor with semantic highlighting for modules, functions, variables, and parameters](docs/screenshots/split-preview-semantic-highlighting.png)
 
 The preview is done through an OpenSCAD STL file generation hence some information like colors are lost.
 
@@ -68,11 +113,13 @@ If you are using a CVS (i.e. git), best is to ignore this folder.
 
 ## Context menu
 
-Right-clicking on a scad file will give you access to two context menu actions :
+When editing a `.scad` file, right-click in the editor or on the editor tab and open the **OpenSCAD** submenu:
 
-* *Open in OpenSCAD* : To open an OpenSCAD instance for the given file.
-* *Export as...* : To export your model in various format using OpenSCAD command line.
-* *Refresh Preview* : If preview is enabled, execute its refresh.
+* **Open in OpenSCAD** — launch OpenSCAD with this file
+* **Export as…** — export via the OpenSCAD command line
+* **Refresh Preview** — regenerate the preview (only when the split preview editor is open)
+
+All three require a configured OpenSCAD executable.
 
 ## Issues and requests
 
