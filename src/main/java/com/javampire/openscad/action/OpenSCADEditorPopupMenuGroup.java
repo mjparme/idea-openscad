@@ -1,10 +1,13 @@
 package com.javampire.openscad.action;
 
+import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.ActionUiKind;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.actionSystem.Presentation;
+import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.project.DumbAware;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,11 +28,21 @@ public class OpenSCADEditorPopupMenuGroup extends DefaultActionGroup implements 
         final Presentation presentation = event.getPresentation();
         boolean anyVisible = false;
         boolean anyEnabled = false;
-        for (final AnAction action : getChildren(event)) {
-            final Presentation child = action.getTemplatePresentation();
-            if (child.isVisible()) {
+        final ActionManager actionManager = ActionManager.getInstance();
+        for (final AnAction action : getChildren(actionManager)) {
+            final Presentation childPresentation = new Presentation();
+            final AnActionEvent childEvent = AnActionEvent.createEvent(
+                    action,
+                    event.getDataContext(),
+                    childPresentation,
+                    event.getPlace(),
+                    ActionUiKind.NONE,
+                    null
+            );
+            ActionUtil.updateAction(action, childEvent);
+            if (childPresentation.isVisible()) {
                 anyVisible = true;
-                if (child.isEnabled()) {
+                if (childPresentation.isEnabled()) {
                     anyEnabled = true;
                 }
             }
