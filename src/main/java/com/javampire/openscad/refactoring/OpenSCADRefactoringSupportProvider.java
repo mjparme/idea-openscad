@@ -14,13 +14,22 @@ public class OpenSCADRefactoringSupportProvider extends RefactoringSupportProvid
     @Override
     public boolean isMemberInplaceRenameAvailable(@NotNull PsiElement element, PsiElement context) {
         PsiElement renamable = resolveRenamable(element, context);
-        return renamable instanceof OpenSCADModuleDeclaration || renamable instanceof OpenSCADFunctionDeclaration;
+        if (renamable instanceof OpenSCADModuleDeclaration || renamable instanceof OpenSCADFunctionDeclaration) {
+            return true;
+        }
+        if (renamable instanceof OpenSCADVariableDeclaration variable) {
+            return OpenSCADRenameUtil.isFileScopeVariable(variable);
+        }
+        return false;
     }
 
     @Override
     public boolean isInplaceRenameAvailable(@NotNull PsiElement element, PsiElement context) {
         PsiElement renamable = resolveRenamable(element, context);
-        return renamable instanceof OpenSCADVariableDeclaration;
+        if (renamable instanceof OpenSCADVariableDeclaration variable) {
+            return !OpenSCADRenameUtil.isFileScopeVariable(variable);
+        }
+        return false;
     }
 
     @Nullable

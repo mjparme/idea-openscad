@@ -1,0 +1,1 @@
+renamedVar = 10;

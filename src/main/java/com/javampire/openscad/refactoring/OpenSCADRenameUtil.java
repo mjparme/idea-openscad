@@ -79,4 +79,12 @@ public final class OpenSCADRenameUtil {
         }
         return "symbol";
     }
+
+    /**
+     * File-scope variables can be referenced from other files via {@code include} and need
+     * member-style inplace rename so all references are updated across the project.
+     */
+    public static boolean isFileScopeVariable(@NotNull OpenSCADVariableDeclaration variable) {
+        return PsiTreeUtil.getParentOfType(variable, OpenSCADModuleDeclaration.class, OpenSCADFunctionDeclaration.class) == null;
+    }
 }

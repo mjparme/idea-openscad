@@ -173,4 +173,104 @@ public class OpenSCADRenameTest extends BasePlatformTestCase {
         myFixture.renameElement(outerVar, "globalVar");
         myFixture.checkResultByFile("file_scope_variable_shadowed_in_module_after.scad");
     }
+
+    public void testRenameIncludedVariableFromDeclarationInLibFile() throws Exception {
+        final var libFile = myFixture.addFileToProject("include_variable_lib_before.scad", loadFile("include_variable_lib_before.scad"));
+        myFixture.addFileToProject("include_variable_main_before.scad", loadFile("include_variable_main_before.scad"));
+        myFixture.configureFromTempProjectFile("include_variable_main_before.scad");
+
+        OpenSCADVariableDeclaration variable = PsiTreeUtil.findChildOfType(libFile, OpenSCADVariableDeclaration.class);
+        assertNotNull(variable);
+        assertEquals("testVar", variable.getName());
+        myFixture.renameElement(variable, "renamedVar");
+        myFixture.checkResultByFile("include_variable_main_after.scad");
+        assertLibFileEquals(libFile, "include_variable_lib_after.scad");
+    }
+
+    public void testRenameIncludedVariableFromReferenceInMainFile() throws Exception {
+        final var libFile = myFixture.addFileToProject("include_variable_lib_before.scad", loadFile("include_variable_lib_before.scad"));
+        myFixture.addFileToProject("include_variable_main_before.scad", loadFile("include_variable_main_before.scad"));
+        myFixture.configureFromTempProjectFile("include_variable_main_before.scad");
+
+        OpenSCADVariableRefExpr variableRef = PsiTreeUtil.findChildOfType(myFixture.getFile(), OpenSCADVariableRefExpr.class);
+        assertNotNull(variableRef);
+        assertEquals("testVar", variableRef.getName());
+        OpenSCADRenameProcessor processor = new OpenSCADRenameProcessor();
+        PsiElement toRename = processor.substituteElementToRename(variableRef, null);
+        assertInstanceOf(toRename, OpenSCADVariableDeclaration.class);
+        assertEquals("testVar", ((OpenSCADVariableDeclaration) toRename).getName());
+        myFixture.renameElement(toRename, "renamedVar");
+        myFixture.checkResultByFile("include_variable_main_after.scad");
+        assertLibFileEquals(libFile, "include_variable_lib_after.scad");
+    }
+
+    public void testRenameIncludedVariableFromReferenceViaInplaceRename() throws Exception {
+        final var libFile = myFixture.addFileToProject("include_variable_lib_before.scad", loadFile("include_variable_lib_before.scad"));
+        myFixture.addFileToProject("include_variable_main_before.scad", loadFile("include_variable_main_before.scad"));
+        myFixture.configureFromTempProjectFile("include_variable_main_before.scad");
+        myFixture.getEditor().getCaretModel().moveToOffset(myFixture.getFile().getText().indexOf("testVar"));
+
+        CodeInsightTestUtil.doInlineRename(new MemberInplaceRenameHandler(), "renamedVar", myFixture);
+        myFixture.checkResultByFile("include_variable_main_after.scad");
+        assertLibFileEquals(libFile, "include_variable_lib_after.scad");
+    }
+
+    public void testRenameUsedModuleFromCallViaInplaceRename() throws Exception {
+        final var libFile = myFixture.addFileToProject("use_module_lib_before.scad", loadFile("use_module_lib_before.scad"));
+        myFixture.addFileToProject("use_module_main_before.scad", loadFile("use_module_main_before.scad"));
+        myFixture.configureFromTempProjectFile("use_module_main_before.scad");
+        myFixture.getEditor().getCaretModel().moveToOffset(myFixture.getFile().getText().indexOf("libModule"));
+
+        CodeInsightTestUtil.doInlineRename(new MemberInplaceRenameHandler(), "renamedModule", myFixture);
+        myFixture.checkResultByFile("use_module_main_after.scad");
+        assertLibFileEquals(libFile, "use_module_lib_after.scad");
+    }
+
+    public void testRenameUsedModuleFromDeclarationInLibFile() throws Exception {
+        final var libFile = myFixture.addFileToProject("use_module_lib_before.scad", loadFile("use_module_lib_before.scad"));
+        myFixture.addFileToProject("use_module_main_before.scad", loadFile("use_module_main_before.scad"));
+        myFixture.configureFromTempProjectFile("use_module_main_before.scad");
+
+        OpenSCADModuleDeclaration module = PsiTreeUtil.findChildOfType(libFile, OpenSCADModuleDeclaration.class);
+        assertNotNull(module);
+        assertEquals("libModule", module.getName());
+        myFixture.renameElement(module, "renamedModule");
+        myFixture.checkResultByFile("use_module_main_after.scad");
+        assertLibFileEquals(libFile, "use_module_lib_after.scad");
+    }
+
+    public void testFileScopeVariableUsesMemberInplaceRename() throws Exception {
+        final var libFile = myFixture.addFileToProject("include_variable_lib_before.scad", loadFile("include_variable_lib_before.scad"));
+        myFixture.addFileToProject("include_variable_main_before.scad", loadFile("include_variable_main_before.scad"));
+        myFixture.configureFromTempProjectFile("include_variable_main_before.scad");
+
+        OpenSCADVariableRefExpr variableRef = PsiTreeUtil.findChildOfType(myFixture.getFile(), OpenSCADVariableRefExpr.class);
+        assertNotNull(variableRef);
+        final OpenSCADRefactoringSupportProvider provider = new OpenSCADRefactoringSupportProvider();
+        assertTrue(provider.isMemberInplaceRenameAvailable(variableRef, variableRef));
+        assertFalse(provider.isInplaceRenameAvailable(variableRef, variableRef));
+
+        OpenSCADVariableDeclaration declaration = PsiTreeUtil.findChildOfType(libFile, OpenSCADVariableDeclaration.class);
+        assertNotNull(declaration);
+        assertTrue(provider.isMemberInplaceRenameAvailable(declaration, declaration));
+        assertFalse(provider.isInplaceRenameAvailable(declaration, declaration));
+    }
+
+    public void testModuleScopedVariableUsesVariableInplaceRename() {
+        myFixture.configureByFile("module_variable_rename_before.scad");
+        OpenSCADVariableDeclaration variable = PsiTreeUtil.findChildOfType(myFixture.getFile(), OpenSCADVariableDeclaration.class);
+        assertNotNull(variable);
+        final OpenSCADRefactoringSupportProvider provider = new OpenSCADRefactoringSupportProvider();
+        assertFalse(provider.isMemberInplaceRenameAvailable(variable, variable));
+        assertTrue(provider.isInplaceRenameAvailable(variable, variable));
+    }
+
+    private String loadFile(String name) throws Exception {
+        return java.nio.file.Files.readString(java.nio.file.Path.of(getTestDataPath(), name));
+    }
+
+    private void assertLibFileEquals(com.intellij.psi.PsiFile libFile, String afterName) throws Exception {
+        assertNotNull(libFile);
+        assertEquals(loadFile(afterName), libFile.getText());
+    }
 }
