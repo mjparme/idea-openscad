@@ -8,17 +8,17 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.util.PsiTreeUtil;
 import static com.javampire.openscad.psi.OpenSCADTypes.*;
+import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import com.javampire.openscad.psi.*;
 
-public class OpenSCADBuiltinOpImpl extends OpenSCADOperatorImpl implements OpenSCADBuiltinOp {
+public class OpenSCADBuiltinOverridableExprRefImpl extends ASTWrapperPsiElement implements OpenSCADBuiltinOverridableExprRef {
 
-  public OpenSCADBuiltinOpImpl(@NotNull ASTNode node) {
+  public OpenSCADBuiltinOverridableExprRefImpl(@NotNull ASTNode node) {
     super(node);
   }
 
-  @Override
   public void accept(@NotNull OpenSCADVisitor visitor) {
-    visitor.visitBuiltinOp(this);
+    visitor.visitBuiltinOverridableExprRef(this);
   }
 
   @Override
@@ -43,12 +43,6 @@ public class OpenSCADBuiltinOpImpl extends OpenSCADOperatorImpl implements OpenS
   @Nullable
   public OpenSCADBuiltinOverridableOpRef getBuiltinOverridableOpRef() {
     return findChildByClass(OpenSCADBuiltinOverridableOpRef.class);
-  }
-
-  @Override
-  @Nullable
-  public OpenSCADCommonOpRef getCommonOpRef() {
-    return findChildByClass(OpenSCADCommonOpRef.class);
   }
 
 }

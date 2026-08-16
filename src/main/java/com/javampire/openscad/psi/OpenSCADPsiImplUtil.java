@@ -299,12 +299,41 @@ public class OpenSCADPsiImplUtil {
 
         if (parent instanceof OpenSCADBuiltinObj builtinObj) {
             final OpenSCADBuiltinObjRef builtinObjRef = builtinObj.getBuiltinObjRef();
-            return builtinObjRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
+            if (builtinObjRef instanceof OpenSCADResolvableElement resolvable) {
+                return resolvable;
+            }
+            final OpenSCADBuiltinOverridableObjRef overridableObjRef = builtinObj.getBuiltinOverridableObjRef();
+            return overridableObjRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
         }
 
         if (parent instanceof OpenSCADBuiltinOp builtinOp) {
             final OpenSCADCommonOpRef commonOpRef = builtinOp.getCommonOpRef();
-            return commonOpRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
+            if (commonOpRef instanceof OpenSCADResolvableElement resolvable) {
+                return resolvable;
+            }
+            final OpenSCADBuiltinOverridableOpRef overridableOpRef = builtinOp.getBuiltinOverridableOpRef();
+            if (overridableOpRef instanceof OpenSCADResolvableElement resolvable) {
+                return resolvable;
+            }
+            final OpenSCADBuiltinOverridableOpAsFunctionRef asFunctionRef = builtinOp.getBuiltinOverridableOpAsFunctionRef();
+            return asFunctionRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
+        }
+
+        if (parent instanceof OpenSCADBuiltinExpr builtinExpr) {
+            final OpenSCADBuiltinExprRef builtinExprRef = builtinExpr.getBuiltinExprRef();
+            if (builtinExprRef instanceof OpenSCADResolvableElement resolvable) {
+                return resolvable;
+            }
+            final OpenSCADBuiltinOverridableExprRef overridableExprRef = builtinExpr.getBuiltinOverridableExprRef();
+            if (overridableExprRef == null) {
+                return null;
+            }
+            final OpenSCADBuiltinOverridableOpAsFunctionRef asFunctionRef = overridableExprRef.getBuiltinOverridableOpAsFunctionRef();
+            if (asFunctionRef instanceof OpenSCADResolvableElement resolvable) {
+                return resolvable;
+            }
+            final OpenSCADBuiltinOverridableOpRef overridableOpRef = overridableExprRef.getBuiltinOverridableOpRef();
+            return overridableOpRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
         }
 
         return null;

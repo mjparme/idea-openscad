@@ -8,17 +8,18 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.util.PsiTreeUtil;
 import static com.javampire.openscad.psi.OpenSCADTypes.*;
-import com.javampire.openscad.psi.OpenSCADNamedElementImpl;
+import com.javampire.openscad.psi.OpenSCADResolvableElementImpl;
 import com.javampire.openscad.psi.*;
+import com.intellij.navigation.ItemPresentation;
 
-public class OpenSCADFullArgDeclarationImpl extends OpenSCADNamedElementImpl implements OpenSCADFullArgDeclaration {
+public class OpenSCADBuiltinOverridableObjRefImpl extends OpenSCADResolvableElementImpl implements OpenSCADBuiltinOverridableObjRef {
 
-  public OpenSCADFullArgDeclarationImpl(@NotNull ASTNode node) {
+  public OpenSCADBuiltinOverridableObjRefImpl(@NotNull ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull OpenSCADVisitor visitor) {
-    visitor.visitFullArgDeclaration(this);
+    visitor.visitBuiltinOverridableObjRef(this);
   }
 
   @Override
@@ -28,9 +29,8 @@ public class OpenSCADFullArgDeclarationImpl extends OpenSCADNamedElementImpl imp
   }
 
   @Override
-  @NotNull
-  public List<OpenSCADExpr> getExprList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, OpenSCADExpr.class);
+  public ItemPresentation getPresentation() {
+    return OpenSCADPsiImplUtil.getPresentation(this);
   }
 
   @Override

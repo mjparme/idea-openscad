@@ -23,7 +23,10 @@ public abstract class OpenSCADResolvableElementImpl extends OpenSCADNamedElement
         if (this instanceof OpenSCADModuleObjNameRef
                 || this instanceof OpenSCADModuleOpNameRef
                 || this instanceof OpenSCADCommonOpRef
-                || this instanceof OpenSCADBuiltinObjRef) {
+                || this instanceof OpenSCADBuiltinObjRef
+                || this instanceof OpenSCADBuiltinOverridableObjRef
+                || this instanceof OpenSCADBuiltinOverridableOpRef
+                || this instanceof OpenSCADBuiltinOverridableOpAsFunctionRef) {
             return OpenSCADModuleIndex.getInstance();
         } else if (this instanceof OpenSCADFunctionNameRef
                 || this instanceof OpenSCADBuiltinExprRef

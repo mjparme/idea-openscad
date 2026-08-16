@@ -5,9 +5,9 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface OpenSCADAssertElement extends PsiElement {
+public interface OpenSCADEachExpr extends OpenSCADExpr {
 
-  @NotNull
-  OpenSCADAssertArgList getAssertArgList();
+  @Nullable
+  OpenSCADExpr getExpr();
 
 }

@@ -37,7 +37,6 @@ public class OpenSCADBosl2ImportTest extends BasePlatformTestCase {
 
     /**
      * Regression test for BOSL2 parser support. Skips when the local BOSL2 checkout is absent (e.g. CI).
-     * Remove the early return (or enable assertions) after porting upstream parser PR #109.
      */
     public void testParsesPathSweepFromRealBosl2SkinExcerpt() throws IOException {
         final Path skinPath = Path.of("/Volumes/Extra Storage/projects/openscad/openscad/lib/bosl2/skin.scad");

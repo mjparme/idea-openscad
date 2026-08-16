@@ -5,7 +5,7 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface OpenSCADBuiltinOp extends OpenSCADOperator {
+public interface OpenSCADBuiltinOverridableExprRef extends PsiElement {
 
   @NotNull
   OpenSCADArgAssignmentList getArgAssignmentList();
@@ -15,8 +15,5 @@ public interface OpenSCADBuiltinOp extends OpenSCADOperator {
 
   @Nullable
   OpenSCADBuiltinOverridableOpRef getBuiltinOverridableOpRef();
-
-  @Nullable
-  OpenSCADCommonOpRef getCommonOpRef();
 
 }

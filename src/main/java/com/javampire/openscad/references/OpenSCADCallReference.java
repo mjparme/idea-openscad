@@ -9,6 +9,9 @@ import com.intellij.util.IncorrectOperationException;
 import com.javampire.openscad.psi.BuiltinSkeletons;
 import com.javampire.openscad.psi.OpenSCADBuiltinExprRef;
 import com.javampire.openscad.psi.OpenSCADBuiltinObjRef;
+import com.javampire.openscad.psi.OpenSCADBuiltinOverridableObjRef;
+import com.javampire.openscad.psi.OpenSCADBuiltinOverridableOpAsFunctionRef;
+import com.javampire.openscad.psi.OpenSCADBuiltinOverridableOpRef;
 import com.javampire.openscad.psi.OpenSCADCommonOpRef;
 import com.javampire.openscad.psi.OpenSCADFunctionDeclaration;
 import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
@@ -56,7 +59,11 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
         if (myElement instanceof OpenSCADFunctionNameRef) {
             return resolveScopedFunctionReferences();
         }
-        if (myElement instanceof OpenSCADBuiltinObjRef || myElement instanceof OpenSCADCommonOpRef) {
+        if (myElement instanceof OpenSCADBuiltinObjRef
+                || myElement instanceof OpenSCADCommonOpRef
+                || myElement instanceof OpenSCADBuiltinOverridableObjRef
+                || myElement instanceof OpenSCADBuiltinOverridableOpRef
+                || myElement instanceof OpenSCADBuiltinOverridableOpAsFunctionRef) {
             return resolveBuiltinModuleReferences();
         }
         if (myElement instanceof OpenSCADBuiltinExprRef) {

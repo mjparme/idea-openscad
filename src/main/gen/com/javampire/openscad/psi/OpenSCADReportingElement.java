@@ -5,9 +5,12 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface OpenSCADAssertElement extends PsiElement {
+public interface OpenSCADReportingElement extends PsiElement {
 
-  @NotNull
-  OpenSCADAssertArgList getAssertArgList();
+  @Nullable
+  OpenSCADAssertElement getAssertElement();
+
+  @Nullable
+  OpenSCADEchoElement getEchoElement();
 
 }
