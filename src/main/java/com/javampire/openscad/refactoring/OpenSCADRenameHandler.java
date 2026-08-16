@@ -41,6 +41,7 @@ public class OpenSCADRenameHandler implements RenameHandler {
         if (element == null || editor == null) {
             return;
         }
+
         final PsiElement nameSuggestionContext = file.findElementAt(editor.getCaretModel().getOffset());
         final String defaultName = PsiElementRenameHandler.DEFAULT_NAME.getData(dataContext);
         if (defaultName != null) {
