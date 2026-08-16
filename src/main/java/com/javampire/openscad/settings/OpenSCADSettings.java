@@ -59,7 +59,7 @@ public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettin
     }
 
     public boolean hasExecutable() {
-        final String path = getOpenSCADExecutable();
+        final String path = normalizeExecutablePath(getOpenSCADExecutable());
         if (StringUtil.isEmptyOrSpaces(path)) {
             return false;
         }

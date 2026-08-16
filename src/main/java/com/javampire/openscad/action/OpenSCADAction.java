@@ -4,15 +4,23 @@ import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.TextEditorWithPreview;
+import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
+import com.javampire.openscad.OpenSCADFileType;
 import com.javampire.openscad.OpenSCADLanguage;
 import com.javampire.openscad.editor.OpenSCADPreviewFileEditor;
 import com.javampire.openscad.settings.OpenSCADSettings;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public abstract class OpenSCADAction extends AnAction {
+public abstract class OpenSCADAction extends AnAction implements DumbAware {
+
+    @Override
+    public @NotNull ActionUpdateThread getActionUpdateThread() {
+        return ActionUpdateThread.BGT;
+    }
 
     /**
      * Set the presentation enable and visible if OpenSCAD executable is found and if the target file is an OpenSCAD one.
@@ -26,15 +34,41 @@ public abstract class OpenSCADAction extends AnAction {
             presentation.setEnabledAndVisible(false);
             return presentation;
         }
-        if (ActionPlaces.isPopupPlace(event.getPlace()) || ActionPlaces.EDITOR_TOOLBAR.equals(event.getPlace())) {
-            final PsiFile psiFile = event.getData(CommonDataKeys.PSI_FILE);
-            final OpenSCADPreviewFileEditor previewEditor = event.getData(OpenSCADDataKeys.PREVIEW_EDITOR);
-            final boolean openScadContext = psiFile != null && psiFile.getLanguage() == OpenSCADLanguage.INSTANCE;
-            presentation.setEnabledAndVisible(openScadContext || previewEditor != null);
+        if (isSupportedActionPlace(event.getPlace())) {
+            presentation.setEnabledAndVisible(isOpenScadContext(event));
         } else {
             presentation.setEnabledAndVisible(false);
         }
         return presentation;
+    }
+
+    static boolean isSupportedActionPlace(@NotNull final String place) {
+        return ActionPlaces.isPopupPlace(place)
+                || ActionPlaces.EDITOR_POPUP.equals(place)
+                || ActionPlaces.EDITOR_TAB_POPUP.equals(place)
+                || ActionPlaces.EDITOR_TOOLBAR.equals(place);
+    }
+
+    static boolean isOpenScadContext(@NotNull final AnActionEvent event) {
+        if (event.getData(OpenSCADDataKeys.PREVIEW_EDITOR) != null) {
+            return true;
+        }
+        final PsiFile psiFile = event.getData(CommonDataKeys.PSI_FILE);
+        if (psiFile != null && psiFile.getLanguage().is(OpenSCADLanguage.INSTANCE)) {
+            return true;
+        }
+        final VirtualFile virtualFile = event.getData(CommonDataKeys.VIRTUAL_FILE);
+        return isOpenScadVirtualFile(virtualFile);
+    }
+
+    static boolean isOpenScadVirtualFile(@Nullable final VirtualFile virtualFile) {
+        if (virtualFile == null) {
+            return false;
+        }
+        if (OpenSCADFileType.INSTANCE.equals(virtualFile.getFileType())) {
+            return true;
+        }
+        return "scad".equalsIgnoreCase(virtualFile.getExtension());
     }
 
 

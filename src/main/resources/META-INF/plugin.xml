@@ -81,7 +81,11 @@
         <action class="com.javampire.openscad.action.ExportAction" id="ExportAs"/>
         <action class="com.javampire.openscad.action.RefreshPreviewAction" id="RefreshPreview"/>
 
-        <group id="OpenSCADEditorPopupMenuEntries" popup="true" text="OpenSCAD" icon="/com/javampire/openscad/icons/openscad.png">
+        <group id="OpenSCADEditorPopupMenuEntries"
+               class="com.javampire.openscad.action.OpenSCADEditorPopupMenuGroup"
+               popup="true"
+               text="OpenSCAD"
+               icon="/com/javampire/openscad/icons/openscad.png">
             <reference ref="OpenIn"/>
             <reference ref="ExportAs"/>
             <reference ref="RefreshPreview"/>
