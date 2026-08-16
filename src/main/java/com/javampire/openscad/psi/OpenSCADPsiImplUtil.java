@@ -76,6 +76,7 @@ public class OpenSCADPsiImplUtil {
         if (OpenSCADParserTokenSets.NON_RENAMABLE_ELEMENTS.contains(element.getNode().getElementType())) {
             throw new IncorrectOperationException("Builtin functions/modules can't be renamed");
         }
+
         return OpenSCADNamedElementImpl.setName(element, newName);
     }
 
@@ -84,6 +85,7 @@ public class OpenSCADPsiImplUtil {
         if (nameNode != null) {
             return nameNode.getPsi();
         }
+
         return null;
     }
 
@@ -92,6 +94,7 @@ public class OpenSCADPsiImplUtil {
         if (nameIdentifier != null) {
             return nameIdentifier.getTextOffset();
         }
+
         return element.getTextRange().getStartOffset();
     }
 
@@ -99,6 +102,7 @@ public class OpenSCADPsiImplUtil {
         if (element instanceof OpenSCADParameterReference parameterReference) {
             return new OpenSCADParameterCallReference(parameterReference);
         }
+
         LOG.debug("Unhandled reference element: " + element);
         return null;
     }
@@ -120,6 +124,7 @@ public class OpenSCADPsiImplUtil {
         } else {
             buf.append(argListNode.getText());
         }
+
         return buf.toString();
     }
 
@@ -132,21 +137,26 @@ public class OpenSCADPsiImplUtil {
         if (element == null) {
             return null;
         }
+
         final ASTNode node = element.getNode();
         if (node == null) {
             return null;
         }
+
         if (DOC_IN_PARENT.contains(node.getElementType())) {
             return getDocString(element.getParent());
         }
+
         final PsiReference reference = element.getReference();
         if (reference != null) {
             return getDocString(reference.resolve());
         }
+
         PsiElement docElement = PsiTreeUtil.skipWhitespacesBackward(element);
         if (docElement == null) {
             return null;
         }
+
         ASTNode docNode = docElement.getNode();
         if (docNode == null) {
             return null;
@@ -155,6 +165,7 @@ public class OpenSCADPsiImplUtil {
         if (text == null) {
             return null;
         }
+
         IElementType docNodeElementType = docNode.getElementType();
         if (docNodeElementType == OpenSCADTypes.COMMENT_SINGLELINE_BLOCK) {
             text = text.replaceAll("(?sm)^\\s*//", "");
@@ -165,6 +176,7 @@ public class OpenSCADPsiImplUtil {
             text = text.replaceFirst("(?s)\\s*\\*/\\s*$", "");
             text = text.replaceAll("(?sm)^\\s*\\*", "");
         }
+
         // If there's no documentation comment placed before the element, and if the element
         // is on one line with an end of line comment, take that comment as documentation
         if (text == null && !isMultiLine(element)) {
@@ -186,11 +198,13 @@ public class OpenSCADPsiImplUtil {
                 text = text.replaceAll("(?sm)^\\s*//", "");
             }
         }
+
         if (text != null) {
             text = text.replaceAll("<", "&lt;");
             text = text.replaceAll(">", "&gt;");
             text = "<pre>" + text + "</pre>";
         }
+
         LOG.debug("Help text: " + text);
         return text;
     }
@@ -250,17 +264,21 @@ public class OpenSCADPsiImplUtil {
         if (callTarget == null) {
             return List.of();
         }
+
         final PsiReference reference = callTarget.getReference();
         if (reference == null) {
             return List.of();
         }
+
         final PsiElement resolved = reference.resolve();
         if (resolved instanceof OpenSCADModuleDeclaration moduleDeclaration) {
             return getDeclarationArgumentList(moduleDeclaration.getArgDeclarationList());
         }
+
         if (resolved instanceof OpenSCADFunctionDeclaration functionDeclaration) {
             return getDeclarationArgumentList(functionDeclaration.getArgDeclarationList());
         }
+
         return List.of();
     }
 
@@ -270,20 +288,25 @@ public class OpenSCADPsiImplUtil {
         if (parent instanceof OpenSCADModuleCallObj moduleCallObj) {
             return moduleCallObj.getModuleObjNameRef();
         }
+
         if (parent instanceof OpenSCADModuleCallOp moduleCallOp) {
             return moduleCallOp.getModuleOpNameRef();
         }
+
         if (parent instanceof OpenSCADFunctionCallExpr functionCallExpr) {
             return functionCallExpr.getFunctionNameRef();
         }
+
         if (parent instanceof OpenSCADBuiltinObj builtinObj) {
             final OpenSCADBuiltinObjRef builtinObjRef = builtinObj.getBuiltinObjRef();
             return builtinObjRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
         }
+
         if (parent instanceof OpenSCADBuiltinOp builtinOp) {
             final OpenSCADCommonOpRef commonOpRef = builtinOp.getCommonOpRef();
             return commonOpRef instanceof OpenSCADResolvableElement resolvable ? resolvable : null;
         }
+
         return null;
     }
 
@@ -313,6 +336,7 @@ public class OpenSCADPsiImplUtil {
             }
             enclosingModule = PsiTreeUtil.getParentOfType(enclosingModule.getParent(), OpenSCADModuleDeclaration.class);
         }
+
         return new ArrayList<>(result);
     }
 
@@ -327,6 +351,7 @@ public class OpenSCADPsiImplUtil {
             }
             enclosingModule = PsiTreeUtil.getParentOfType(enclosingModule.getParent(), OpenSCADModuleDeclaration.class);
         }
+
         return new ArrayList<>(result);
     }
 
@@ -345,9 +370,9 @@ public class OpenSCADPsiImplUtil {
         if (file == null) {
             return;
         }
+
         for (final PsiElement child : file.getChildren()) {
-            if (child instanceof OpenSCADModuleDeclaration moduleDeclaration
-                && !PsiTreeUtil.isAncestor(moduleDeclaration, element, false)) {
+            if (child instanceof OpenSCADModuleDeclaration moduleDeclaration && !PsiTreeUtil.isAncestor(moduleDeclaration, element, false)) {
                 result.add(moduleDeclaration);
             }
         }
@@ -359,9 +384,9 @@ public class OpenSCADPsiImplUtil {
         if (file == null) {
             return;
         }
+
         for (final PsiElement child : file.getChildren()) {
-            if (child instanceof OpenSCADFunctionDeclaration functionDeclaration
-                && !PsiTreeUtil.isAncestor(functionDeclaration, element, false)) {
+            if (child instanceof OpenSCADFunctionDeclaration functionDeclaration && !PsiTreeUtil.isAncestor(functionDeclaration, element, false)) {
                 result.add(functionDeclaration);
             }
         }
@@ -418,6 +443,7 @@ public class OpenSCADPsiImplUtil {
         if (element != null && !(element instanceof PsiFileBase)) {
             element = element.getParent();
         }
+
         while (element != null) {
             final ASTNode node = element.getNode();
             if (node != null && elementTypes.contains(node.getElementType())) {
@@ -425,6 +451,7 @@ public class OpenSCADPsiImplUtil {
             }
             element = element.getParent();
         }
+
         return matchingParents;
     }
 }

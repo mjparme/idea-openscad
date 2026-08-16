@@ -26,7 +26,7 @@ public final class BuiltinSkeletons {
     private static final String FUNCTIONS_RESOURCE = BuiltinSkeletonResources.FUNCTIONS_RESOURCE;
     private static final String POSITIONAL_FIRST_ARGUMENT_MARKER = "// POSITIONAL_FIRST_ARGUMENT:";
     private static final Set<String> DEFAULT_POSITIONAL_FIRST_ARGUMENT_MODULES =
-            Set.of("cube", "sphere", "rotate", "translate");
+        Set.of("cube", "sphere", "rotate", "translate");
 
     private static Map<String, OpenSCADModuleDeclaration> moduleDeclarations;
     private static Map<String, OpenSCADFunctionDeclaration> functionDeclarations;
@@ -46,14 +46,12 @@ public final class BuiltinSkeletons {
     }
 
     @Nullable
-    public static OpenSCADModuleDeclaration findModuleDeclaration(@NotNull final Project project,
-                                                                  @NotNull final String name) {
+    public static OpenSCADModuleDeclaration findModuleDeclaration(@NotNull final Project project, @NotNull final String name) {
         return getModuleDeclarations(project).get(name);
     }
 
     @Nullable
-    public static OpenSCADFunctionDeclaration findFunctionDeclaration(@NotNull final Project project,
-                                                                      @NotNull final String name) {
+    public static OpenSCADFunctionDeclaration findFunctionDeclaration(@NotNull final Project project, @NotNull final String name) {
         return getFunctionDeclarations(project).get(name);
     }
 
@@ -61,6 +59,7 @@ public final class BuiltinSkeletons {
         if (DEFAULT_POSITIONAL_FIRST_ARGUMENT_MODULES.contains(name)) {
             return true;
         }
+
         return getPositionalFirstArgumentModules().contains(name);
     }
 
@@ -73,6 +72,7 @@ public final class BuiltinSkeletons {
             positionalFirstArgumentModules = parsePositionalFirstArgumentModules(skeleton);
             moduleSkeletonContentHash = contentHash;
         }
+
         return moduleDeclarations;
     }
 
@@ -83,19 +83,21 @@ public final class BuiltinSkeletons {
             if (virtualFile != null) {
                 try {
                     positionalFirstArgumentModules =
-                            parsePositionalFirstArgumentModules(virtualFile.contentsToByteArray());
-                }
-                catch (java.io.IOException ignored) {
+                        parsePositionalFirstArgumentModules(virtualFile.contentsToByteArray());
+                } catch (java.io.IOException ignored) {
                     positionalFirstArgumentModules = Set.of();
                 }
             }
+
             if (positionalFirstArgumentModules == null) {
                 positionalFirstArgumentModules = Set.of();
             }
+
             if (positionalFirstArgumentModules.isEmpty()) {
                 positionalFirstArgumentModules = DEFAULT_POSITIONAL_FIRST_ARGUMENT_MODULES;
             }
         }
+
         return positionalFirstArgumentModules;
     }
 
@@ -106,6 +108,7 @@ public final class BuiltinSkeletons {
             functionDeclarations = indexFunctions(loadSkeleton(project, FUNCTIONS_RESOURCE));
             functionSkeletonContentHash = contentHash;
         }
+
         return functionDeclarations;
     }
 
@@ -115,6 +118,7 @@ public final class BuiltinSkeletons {
         if (virtualFile == null) {
             return null;
         }
+
         return PsiManager.getInstance(project).findFile(virtualFile);
     }
 
@@ -123,14 +127,16 @@ public final class BuiltinSkeletons {
         if (skeleton == null) {
             return Map.of();
         }
+
         final Map<String, OpenSCADModuleDeclaration> result = new HashMap<>();
         for (final OpenSCADModuleDeclaration declaration :
-                PsiTreeUtil.getChildrenOfTypeAsList(skeleton, OpenSCADModuleDeclaration.class)) {
+            PsiTreeUtil.getChildrenOfTypeAsList(skeleton, OpenSCADModuleDeclaration.class)) {
             final String name = declaration.getName();
             if (name != null) {
                 result.put(name, declaration);
             }
         }
+
         return result;
     }
 
@@ -139,14 +145,16 @@ public final class BuiltinSkeletons {
         if (skeleton == null) {
             return Map.of();
         }
+
         final Map<String, OpenSCADFunctionDeclaration> result = new HashMap<>();
         for (final OpenSCADFunctionDeclaration declaration :
-                PsiTreeUtil.getChildrenOfTypeAsList(skeleton, OpenSCADFunctionDeclaration.class)) {
+            PsiTreeUtil.getChildrenOfTypeAsList(skeleton, OpenSCADFunctionDeclaration.class)) {
             final String name = declaration.getName();
             if (name != null) {
                 result.put(name, declaration);
             }
         }
+
         return result;
     }
 
@@ -155,6 +163,7 @@ public final class BuiltinSkeletons {
         if (skeleton == null) {
             return Set.of();
         }
+
         return parsePositionalFirstArgumentModules(skeleton.getText());
     }
 
@@ -170,16 +179,19 @@ public final class BuiltinSkeletons {
             if (!trimmed.contains(POSITIONAL_FIRST_ARGUMENT_MARKER)) {
                 continue;
             }
+
             final int markerIndex = trimmed.indexOf(POSITIONAL_FIRST_ARGUMENT_MARKER);
             final String names = trimmed.substring(markerIndex + POSITIONAL_FIRST_ARGUMENT_MARKER.length()).trim();
             if (names.isEmpty()) {
                 return Set.of();
             }
+
             return Arrays.stream(names.split(","))
-                    .map(String::trim)
-                    .filter(name -> !name.isEmpty())
-                    .collect(Collectors.toCollection(HashSet::new));
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .collect(Collectors.toCollection(HashSet::new));
         }
+        
         return Set.of();
     }
 }

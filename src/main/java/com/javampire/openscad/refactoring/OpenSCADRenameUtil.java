@@ -18,9 +18,11 @@ public final class OpenSCADRenameUtil {
         if (!(element instanceof PsiNameIdentifierOwner owner) || owner.getNameIdentifier() == null) {
             return false;
         }
+
         if (OpenSCADParserTokenSets.NON_RENAMABLE_ELEMENTS.contains(element.getNode().getElementType())) {
             return false;
         }
+
         return element instanceof OpenSCADModuleDeclaration
                 || element instanceof OpenSCADFunctionDeclaration
                 || element instanceof OpenSCADVariableDeclaration
@@ -39,6 +41,7 @@ public final class OpenSCADRenameUtil {
         if (element == null) {
             return null;
         }
+
         if (isRenamable(element)) {
             if (element instanceof OpenSCADResolvableElement resolvable) {
                 final PsiReference reference = resolvable.getReference();
@@ -51,12 +54,14 @@ public final class OpenSCADRenameUtil {
             }
             return element;
         }
+
         if (element.getNode().getElementType() == OpenSCADTypes.IDENTIFIER) {
             final PsiNameIdentifierOwner owner = PsiTreeUtil.getParentOfType(element, PsiNameIdentifierOwner.class, false);
             if (owner != null && isRenamable(owner)) {
                 return owner;
             }
         }
+        
         return null;
     }
 
