@@ -2,20 +2,6 @@
 
 # OpenSCAD Intellij plugin ChangeLog
 
-## Unreleased
-
-### Added
-
-### Changed
-
-- Marketplace display name: **OpenSCAD Support** (avoids conflict with the original plugin listing; Marketplace disallows "IntelliJ" in plugin names)
-
-### Removed
-
-### Fixed
-
-- Optional JCEF dependency now uses a `config-file` descriptor for split-preview extensions
-
 ## 1.1.0
 
 ### Added
@@ -25,7 +11,12 @@
 
 ### Changed
 
+- Marketplace display name: **OpenSCAD Support** (avoids conflict with the original plugin listing; Marketplace disallows "IntelliJ" in plugin names)
 - Reunified `echo_element` with `arg_assignment_list` for consistent PSI and named-parameter resolution
+
+### Fixed
+
+- Optional JCEF dependency now uses a `config-file` descriptor for split-preview extensions
 
 ## 1.0.0
 
