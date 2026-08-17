@@ -16,6 +16,17 @@
 
 - Optional JCEF dependency now uses a `config-file` descriptor for split-preview extensions
 
+## 1.1.0
+
+### Added
+
+- Completion for `use` / `include` import paths and language keywords (imports, declarations, control flow, and literals)
+- BOSL2 parser support: overridable builtin parsing, `each` / `assert` extensions, and test coverage so real library files (e.g. `skin.scad`) parse correctly
+
+### Changed
+
+- Reunified `echo_element` with `arg_assignment_list` for consistent PSI and named-parameter resolution
+
 ## 1.0.0
 
 Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the unmaintained `com.javampire.idea-openscad` listing on JetBrains Marketplace).
@@ -228,9 +239,3 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 ### Fix
 
 - Fixed change-log from the default text
-
-## 1.1.0
-
-### Changed
-
-- Updated plugin name to conform to standards for uploading to the jetbrains plugin repository.
