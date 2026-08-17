@@ -121,16 +121,6 @@ When editing a `.scad` file, right-click in the editor or on the editor tab and 
 
 All three require a configured OpenSCAD executable.
 
-## Known issues
-
-### BOSL2 library parsing (navigation, completion, inspections)
-
-Large [BOSL2](https://github.com/BelfrySCAD/BOSL2) files may not parse completely. Symptoms include unresolved references to modules that exist in an included library file (for example `path_sweep` in `skin.scad`), missing completions from `include` chains, and false positives from the unresolved-reference inspection.
-
-This is a **parser** limitation, not a resolver bug: the include/`use` machinery works when the library file parses. BOSL2 uses OpenSCAD features our grammar does not fully support yet (builtin modules called as functions, extended `assert` forms, `each`, and related syntax). Parser error recovery can stop partway through a file, so declarations later in the file never enter the PSI tree.
-
-A fix is planned by porting upstream work — see [ldenisey/idea-openscad#109](https://github.com/ldenisey/idea-openscad/pull/109) (*Modify the parser to handle the files from the BOSL2 library*).
-
 ## Issues and requests
 
 Issues and requests are tracked in the [Issues tab](https://github.com/mjparme/idea-openscad/issues).
