@@ -5,30 +5,28 @@ import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionPlaces;
 import com.intellij.openapi.actionSystem.ActionToolbar;
-import com.intellij.openapi.actionSystem.ActionUiKind;
 import com.intellij.openapi.actionSystem.AnAction;
-import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
-import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.actionSystem.DataSink;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
-import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.actionSystem.Separator;
 import com.intellij.openapi.actionSystem.UiDataProvider;
-import com.intellij.openapi.actionSystem.ex.ActionUtil;
-import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.*;
 import com.intellij.openapi.fileEditor.impl.EditorHistoryManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiDocumentManager;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.UserDataHolderBase;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.vfs.newvfs.BulkFileListener;
+import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
@@ -41,6 +39,7 @@ import org.cef.browser.CefBrowser;
 import org.cef.browser.CefFrame;
 import org.cef.browser.CefMessageRouter;
 import org.cef.callback.CefQueryCallback;
+import org.cef.handler.CefLoadHandlerAdapter;
 import org.cef.handler.CefMessageRouterHandlerAdapter;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
@@ -70,6 +69,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     private @Nullable JCEFHtmlPanel htmlPanel;
     private ActionToolbar previewToolbar;
     private final Alarm mySwingAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
+    private final Alarm previewRefreshAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
     private @Nullable Disposable vfsListenerDisposable;
 
     private OpenSCADPreviewFileEditorConfiguration editorConfig = new OpenSCADPreviewFileEditorConfiguration(this);
@@ -201,6 +201,14 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         final CefMessageRouter messageRouter = CefMessageRouter.create();
         messageRouter.addHandler(new CefMessageRouterHandler(), true);
         htmlPanel.getJBCefClient().getCefClient().addMessageRouter(messageRouter);
+        htmlPanel.getJBCefClient().addLoadHandler(new CefLoadHandlerAdapter() {
+            @Override
+            public void onLoadEnd(final CefBrowser browser, final CefFrame frame, final int httpStatusCode) {
+                if (frame.isMain()) {
+                    renderWasmPreview();
+                }
+            }
+        }, htmlPanel.getCefBrowser());
         previewToolbar = createToolbar(mainPanel);
         mainPanel.clearMessage();
         mainPanel.add(previewToolbar.getComponent(), BorderLayout.NORTH);
@@ -208,7 +216,44 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         if (mainPanel.isShowing()) mainPanel.validate();
         mainPanel.repaint();
         htmlPanel.getCefBrowser().reload();
-        generatePreview();
+    }
+
+    /**
+     * Collect current editor sources and render them in the JCEF preview via WebAssembly.
+     * Safe to call from any thread (including CEF load handlers).
+     */
+    public void renderWasmPreview() {
+        if (htmlPanel == null) {
+            return;
+        }
+        final CefBrowser browser = htmlPanel.getCefBrowser();
+        final ModalityState modality = ModalityState.stateForComponent(getComponent());
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            final OpenSCADPreviewSourceCollector.PreviewSources sources = ReadAction.compute(
+                    () -> {
+                        commitDocumentIfOpen();
+                        return OpenSCADPreviewSourceCollector.collect(project, scadFile);
+                    }
+            );
+            ApplicationManager.getApplication().invokeLater(() -> {
+                if (htmlPanel == null) {
+                    return;
+                }
+                if (sources == null) {
+                    showPreviewError("Could not read OpenSCAD sources for preview.");
+                    LOG.warn("Failed to collect preview sources for " + scadFile.getPath());
+                    return;
+                }
+                OpenSCADPreviewWasmBridge.render(browser, sources);
+            }, modality);
+        });
+    }
+
+    private void commitDocumentIfOpen() {
+        final Document document = FileDocumentManager.getInstance().getDocument(scadFile);
+        if (document != null) {
+            PsiDocumentManager.getInstance(project).commitDocument(document);
+        }
     }
 
     private void showPreviewError(@NotNull final String message) {
@@ -243,40 +288,52 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         return actionToolbar;
     }
 
-    /**
-     * Fake an action event to generate the preview.
-     */
-    private void generatePreview() {
-        final AnAction generatePreviewAction = new GeneratePreviewAction();
-        final DataContext dataContext = SimpleDataContext.builder()
-                .add(OpenSCADDataKeys.PREVIEW_EDITOR, OpenSCADPreviewFileEditor.this)
-                .build();
-        final AnActionEvent event = AnActionEvent.createEvent(
-                dataContext,
-                new Presentation(GeneratePreviewAction.TEXT),
-                ActionPlaces.UNKNOWN,
-                ActionUiKind.NONE,
-                null
-        );
-        ActionUtil.performAction(generatePreviewAction, event);
-    }
-
     private void registerSaveListener() {
         if (vfsListenerDisposable != null) {
             return;
         }
         vfsListenerDisposable = Disposer.newDisposable("OpenSCADPreviewSaveListener");
+        // FileDocumentManagerListener is application-scoped; project bus does not receive save events.
+        ApplicationManager.getApplication().getMessageBus().connect(vfsListenerDisposable)
+                .subscribe(FileDocumentManagerListener.TOPIC, new FileDocumentManagerListener() {
+                    @Override
+                    public void afterDocumentSaved(@NotNull final Document document) {
+                        final VirtualFile file = FileDocumentManager.getInstance().getFile(document);
+                        if (file != null && isSameScadFile(file)) {
+                            scheduleRefreshPreviewOnSave();
+                        }
+                    }
+                });
         project.getMessageBus().connect(vfsListenerDisposable).subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
             @Override
             public void after(@NotNull final List<? extends VFileEvent> events) {
                 for (final VFileEvent event : events) {
-                    if (event.isFromSave() && scadFile.equals(event.getFile())
-                            && Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
-                        refreshPreviewOnSave();
+                    if (!(event instanceof VFileContentChangeEvent contentChange) || !contentChange.isFromSave()) {
+                        continue;
+                    }
+                    final VirtualFile file = event.getFile();
+                    if (file != null && isSameScadFile(file)) {
+                        scheduleRefreshPreviewOnSave();
                     }
                 }
             }
         });
+    }
+
+    private boolean isSameScadFile(@NotNull final VirtualFile file) {
+        return file.equals(scadFile);
+    }
+
+    private void scheduleRefreshPreviewOnSave() {
+        if (!Boolean.TRUE.equals(editorConfig.getAutoRefresh()) || htmlPanel == null) {
+            return;
+        }
+        previewRefreshAlarm.cancelAllRequests();
+        previewRefreshAlarm.addRequest(
+                this::refreshPreviewOnSave,
+                150,
+                ModalityState.stateForComponent(getComponent())
+        );
     }
 
     private void unregisterSaveListener() {
@@ -287,20 +344,8 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     }
 
     private void refreshPreviewOnSave() {
-        final AnAction refreshPreviewAction = new RefreshPreviewAction();
-        final DataContext dataContext = SimpleDataContext.builder()
-                .add(OpenSCADDataKeys.PREVIEW_EDITOR, OpenSCADPreviewFileEditor.this)
-                .add(CommonDataKeys.PROJECT, project)
-                .add(CommonDataKeys.VIRTUAL_FILE, scadFile)
-                .build();
-        final AnActionEvent event = AnActionEvent.createEvent(
-                dataContext,
-                new Presentation(RefreshPreviewAction.TEXT),
-                ActionPlaces.UNKNOWN,
-                ActionUiKind.NONE,
-                null
-        );
-        ActionUtil.performAction(refreshPreviewAction, event);
+        editorConfig.saveConfiguration();
+        renderWasmPreview();
     }
 
     @Override
@@ -406,8 +451,11 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
             } else if (MODEL_COLOR.equals(parsed[0])) {
                 editorConfig.setModelColor(JBColor.decode(parsed[1]));
             } else {
-                return false;
+                LOG.info("Preview: " + request);
+                callback.success("");
+                return true;
             }
+            callback.success("");
             return true;
         }
     }

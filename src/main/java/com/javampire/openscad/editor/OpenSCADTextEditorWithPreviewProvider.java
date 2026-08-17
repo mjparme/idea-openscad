@@ -34,8 +34,7 @@ public class OpenSCADTextEditorWithPreviewProvider implements AsyncFileEditorPro
         if (!previewEditorProvider.accept(project, file)) {
             final OpenSCADSettings settings = OpenSCADSettings.getInstance();
             LOG.warn("OpenSCAD split preview not used: allowPreview=" + settings.isAllowPreviewEditor()
-                    + ", jcef=" + JcefSupport.isSupported()
-                    + ", executable=" + settings.hasExecutable());
+                    + ", jcef=" + JcefSupport.isSupported());
             return false;
         }
         if (FileIndexFacade.getInstance(project).getModuleForFile(file) == null) {

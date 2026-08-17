@@ -7,6 +7,7 @@ module.exports = {
   entry: "./src/main/javascript/index.js",
   output: {
     filename: "main.js",
+    chunkFilename: "[name].js",
     path: path.resolve(__dirname, "./src/main/generated-resources/html"),
   },
   plugins: [

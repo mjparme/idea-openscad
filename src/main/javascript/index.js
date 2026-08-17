@@ -8,6 +8,7 @@ const NAME_AXIS = "AXIS";
 const NAME_CAMERA = "CAMERA";
 const GRID_COLOR = 0x909090;
 const MODEL_COLOR = 0xfef353;
+const PREVIEW_PREFIX = "$preview=true;\n";
 
 if (typeof window.cefQuery !== "function") {
   window.cefQuery = console.log;
@@ -82,6 +83,9 @@ function setModelColor(color) {
 
 function saveConfiguration() {
   const mesh = scene.getObjectByName(NAME_MODEL);
+  if (!mesh) {
+    return;
+  }
   sessionStorage.setItem("color", mesh.material.color.getHex().toString());
   sessionStorage.setItem(
     "showAxis",
@@ -173,8 +177,86 @@ window.setModelColor = setModelColor;
 window.saveConfiguration = saveConfiguration;
 window.loadConfiguration = loadConfiguration;
 
-// Get model
-const model = document.getElementsByName("model")[0].content || "demo.stl";
+function displayStlGeometry(geometry) {
+  const existing = scene.getObjectByName(NAME_MODEL);
+  if (existing) {
+    scene.remove(existing);
+    existing.geometry.dispose();
+  }
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = NAME_MODEL;
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.geometry.center();
+  scene.add(mesh);
+  loadConfiguration();
+}
+
+const loader = new STLLoader();
+let previewWorker = null;
+let previewGeneration = 0;
+
+function resetPreviewWorker() {
+  if (previewWorker) {
+    previewWorker.terminate();
+    previewWorker = null;
+  }
+}
+
+function getPreviewWorker() {
+  if (!previewWorker) {
+    previewWorker = new Worker(
+      new URL("./openscad-worker.js", import.meta.url),
+      { type: "module" },
+    );
+    previewWorker.onmessage = (event) => {
+      const { type, generation, message, stl } = event.data;
+      if (type === "status" || type === "log") {
+        window.cefQuery({ request: message });
+        return;
+      }
+      if (type === "error") {
+        console.error(message);
+        window.cefQuery({ request: "WASM preview error: " + message });
+        resetPreviewWorker();
+        return;
+      }
+      if (type === "done") {
+        if (generation !== previewGeneration) {
+          return;
+        }
+        const geometry = loader.parse(stl);
+        displayStlGeometry(geometry);
+        window.cefQuery({ request: "WASM preview rendered" });
+      }
+    };
+    previewWorker.onerror = (error) => {
+      console.error(error);
+      window.cefQuery({ request: "WASM worker error: " + error.message });
+      resetPreviewWorker();
+    };
+  }
+  return previewWorker;
+}
+
+window.renderPreview = function renderPreview(payload) {
+  const files = { ...payload.files };
+  const mainContent = files[payload.mainPath];
+  if (mainContent != null) {
+    files[payload.mainPath] = PREVIEW_PREFIX + mainContent;
+  }
+
+  previewGeneration += 1;
+  const generation = previewGeneration;
+
+  window.cefQuery({ request: "Rendering preview with WebAssembly" });
+  getPreviewWorker().postMessage({
+    type: "render",
+    generation,
+    mainPath: payload.mainPath,
+    files,
+  });
+};
 
 // Create scene
 const scene = new THREE.Scene();
@@ -212,26 +294,6 @@ const material = new THREE.MeshStandardMaterial({
   roughness: 0.2,
   flatShading: true,
 });
-
-// Load STL
-const loader = new STLLoader();
-loader.load(
-  model,
-  function (geometry) {
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.name = NAME_MODEL;
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.geometry.center();
-    scene.add(mesh);
-    loadConfiguration();
-  },
-  (xhr) => {
-    console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
-  },
-  (error) => {
-    console.log(error);
-  },
-);
 
 window.addEventListener(
   "resize",

@@ -39,6 +39,17 @@ sourceSets {
 
 tasks.processResources {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE  // Options: INCLUDE, EXCLUDE, WARN, FAIL
+    dependsOn("webpack")
+}
+
+tasks.register<Exec>("webpack") {
+    group = "build"
+    description = "Bundle preview web assets (Three.js + optional WASM) into generated-resources/html"
+    workingDir = layout.projectDirectory.asFile
+    commandLine("npx", "webpack")
+    inputs.dir("src/main/javascript")
+    inputs.files("webpack.config.js", "package.json", "src/main/javascript/package.json")
+    outputs.dir("src/main/generated-resources/html")
 }
 
 // Repositories are configured in settings.gradle.kts
