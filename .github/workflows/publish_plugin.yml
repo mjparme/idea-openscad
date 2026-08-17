@@ -1,0 +1,28 @@
+# Publish the plugin to JetBrains Marketplace.
+# Requires JETBRAINS_PUBLISH_TOKEN repository secret.
+#
+# Manual trigger only — set pluginVersion and CHANGELOG.md before running.
+#
+# Docs:
+# - GitHub Actions: https://help.github.com/en/actions
+##
+
+name: Publish plugin
+on: [ workflow_dispatch ]
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 25
+      - uses: actions/checkout@v4
+      - uses: gradle/wrapper-validation-action@v1.1.0
+
+      - name: Publish Plugin
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+        run: ./gradlew publishPlugin

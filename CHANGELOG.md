@@ -2,6 +2,16 @@
 
 # OpenSCAD Intellij plugin ChangeLog
 
+## Unreleased
+
+### Added
+
+### Changed
+
+### Removed
+
+### Fixed
+
 ## 1.1.0
 
 ### Added
