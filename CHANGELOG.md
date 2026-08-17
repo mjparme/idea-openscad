@@ -234,10 +234,3 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 ### Changed
 
 - Updated plugin name to conform to standards for uploading to the jetbrains plugin repository.
-
-## 1.0.0
-
-### Added
-
-- Syntax highlighting
-- Code folding
