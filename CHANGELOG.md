@@ -12,6 +12,11 @@
 
 ### Fixed
 
+- Deprecated and scheduled-for-removal IntelliJ Platform API usages migrated to clear Plugin Verifier warnings
+- Editor context menu: OpenSCAD submenu visible again in editor popup
+- Open in OpenSCAD: launch detached so the background task completes immediately instead of waiting for the GUI to exit
+- Parser: module calls that shadow builtin names (e.g. user-defined `floor()` module) parse and resolve correctly
+
 ## 1.1.0
 
 ### Added
