@@ -2,20 +2,6 @@
 
 # OpenSCAD Intellij plugin ChangeLog
 
-## Unreleased
-
-### Added
-
-### Changed
-
-- Marketplace display name: **OpenSCAD Support** (avoids conflict with the original plugin listing; Marketplace disallows "IntelliJ" in plugin names)
-
-### Removed
-
-### Fixed
-
-- Optional JCEF dependency now uses a `config-file` descriptor for split-preview extensions
-
 ## 1.0.0
 
 Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the unmaintained `com.javampire.idea-openscad` listing on JetBrains Marketplace).
@@ -234,10 +220,3 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 ### Changed
 
 - Updated plugin name to conform to standards for uploading to the jetbrains plugin repository.
-
-## 1.0.0
-
-### Added
-
-- Syntax highlighting
-- Code folding
