@@ -133,6 +133,12 @@ public class OpenSCADParserTokenSets {
             VARIABLE_REF_EXPR, VARIABLE_DECLARATION
     );
 
+    public static final TokenSet MODULE_CALLABLE_NAME_KEYWORDS = TokenSet.orSet(
+            FUNCTION_KEYWORDS,
+            OVERRIDABLE_OBJECT_KEYWORDS,
+            OVERRIDABLE_OPERATOR_KEYWORDS
+    );
+
     /**
      * builtin_expr_ref keywords
      */

@@ -119,11 +119,16 @@ builtin_overridable_op_ref ::= builtin_overridable_op_keywords
 }
 
 module_call_obj ::= module_obj_name_ref arg_assignment_list SEMICOLON
-module_obj_name_ref ::= IDENTIFIER {
+module_obj_name_ref ::= module_callable_name {
     mixin="com.javampire.openscad.psi.OpenSCADResolvableElementImpl"
     implements="com.javampire.openscad.psi.OpenSCADResolvableElement"
     methods=[getPresentation getNameIdentifier]
 }
+
+private module_callable_name ::= IDENTIFIER
+                               | builtin_expr_ref
+                               | builtin_overridable_obj_keywords
+                               | builtin_overridable_op_keywords
 
 block_obj ::= LBRACE statement* RBRACE
 
@@ -171,7 +176,7 @@ operator ::= builtin_op
            | module_call_op
 
 module_call_op ::= module_op_name_ref arg_assignment_list
-module_op_name_ref ::= IDENTIFIER {
+module_op_name_ref ::= module_callable_name {
     mixin="com.javampire.openscad.psi.OpenSCADResolvableElementImpl"
     implements="com.javampire.openscad.psi.OpenSCADResolvableElement"
     methods=[getPresentation getNameIdentifier]

@@ -1437,7 +1437,6 @@ public class OpenSCADParser implements PsiParser, LightPsiParser {
   // module_obj_name_ref arg_assignment_list SEMICOLON
   public static boolean module_call_obj(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "module_call_obj")) return false;
-    if (!nextTokenIs(b, IDENTIFIER)) return false;
     boolean r;
     Marker m = enter_section_(b);
     r = module_obj_name_ref(b, l + 1);
@@ -1451,7 +1450,6 @@ public class OpenSCADParser implements PsiParser, LightPsiParser {
   // module_op_name_ref arg_assignment_list
   public static boolean module_call_op(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "module_call_op")) return false;
-    if (!nextTokenIs(b, IDENTIFIER)) return false;
     boolean r;
     Marker m = enter_section_(b);
     r = module_op_name_ref(b, l + 1);
@@ -1476,26 +1474,36 @@ public class OpenSCADParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // IDENTIFIER
-  public static boolean module_obj_name_ref(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "module_obj_name_ref")) return false;
-    if (!nextTokenIs(b, IDENTIFIER)) return false;
+  // module_callable_name
+  static boolean module_callable_name(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "module_callable_name")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, IDENTIFIER);
-    exit_section_(b, m, MODULE_OBJ_NAME_REF, r);
+    if (!r) r = builtin_expr_ref(b, l + 1);
+    if (!r) r = builtin_overridable_obj_keywords(b, l + 1);
+    if (!r) r = builtin_overridable_op_keywords(b, l + 1);
     return r;
   }
 
   /* ********************************************************** */
-  // IDENTIFIER
+  // module_callable_name
+  public static boolean module_obj_name_ref(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "module_obj_name_ref")) return false;
+    boolean r;
+    Marker m = enter_section_(b, l, _NONE_, MODULE_OBJ_NAME_REF, "<module obj name ref>");
+    r = module_callable_name(b, l + 1);
+    exit_section_(b, l, m, r, false, null);
+    return r;
+  }
+
+  /* ********************************************************** */
+  // module_callable_name
   public static boolean module_op_name_ref(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "module_op_name_ref")) return false;
-    if (!nextTokenIs(b, IDENTIFIER)) return false;
     boolean r;
-    Marker m = enter_section_(b);
-    r = consumeToken(b, IDENTIFIER);
-    exit_section_(b, m, MODULE_OP_NAME_REF, r);
+    Marker m = enter_section_(b, l, _NONE_, MODULE_OP_NAME_REF, "<module op name ref>");
+    r = module_callable_name(b, l + 1);
+    exit_section_(b, l, m, r, false, null);
     return r;
   }
 

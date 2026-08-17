@@ -31,16 +31,16 @@ public abstract class OpenSCADExecutableAction extends OpenSCADAction {
         }
 
         performing = true;
+        final boolean waitForCompletion = waitForProcessCompletion();
         ProgressManager.getInstance().run(new Task.Backgroundable(
                 event.getProject(),
                 capitalizeFully(event.getPresentation().getText()),
-                true,
-                null
+                waitForCompletion
         ) {
             @Override
             public void run(@NotNull ProgressIndicator progressIndicator) {
                 // Execute command
-                final OpenSCADExecutor executor = OpenSCADExecutor.execute(arguments);
+                final OpenSCADExecutor executor = OpenSCADExecutor.execute(arguments, waitForCompletion);
                 if (executor == null) {
                     Messages.showErrorDialog(
                             OpenSCADExecutor.ERROR_NO_EXE,
@@ -54,7 +54,7 @@ public abstract class OpenSCADExecutableAction extends OpenSCADAction {
                             NotificationType.ERROR
                     );
                     notification.notify(event.getProject());
-                } else if (executor.getReturnCode() != 0) {
+                } else if (waitForCompletion && executor.getReturnCode() != null && executor.getReturnCode() != 0) {
                     final Notification notification = new Notification(
                             OpenSCADPreviewFileEditor.class.getSimpleName(),
                             "OpenSCAD execution error",
@@ -95,6 +95,14 @@ public abstract class OpenSCADExecutableAction extends OpenSCADAction {
      */
     protected void postExecution(@NotNull final AnActionEvent event) {
 
+    }
+
+    /**
+     * Whether to block until the OpenSCAD process exits.
+     * GUI launches should return false; export and preview generation should return true.
+     */
+    protected boolean waitForProcessCompletion() {
+        return true;
     }
 
     /**

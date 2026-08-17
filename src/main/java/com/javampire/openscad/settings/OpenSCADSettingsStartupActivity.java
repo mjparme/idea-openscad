@@ -9,7 +9,7 @@ import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
 import com.intellij.notification.NotificationType;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.impl.text.TextEditorImpl;
@@ -68,7 +68,7 @@ public class OpenSCADSettingsStartupActivity {
     private final static String OPENSCAD_LIBRARY_NAME = "OpenSCAD Libraries";
 
     public static void runStartup(@NotNull final Project project) {
-        if (!ReadAction.compute(() -> projectContainsScadFiles(project))) {
+        if (!ApplicationManager.getApplication().runReadAction((Computable<Boolean>) () -> projectContainsScadFiles(project))) {
             return;
         }
 

@@ -9,7 +9,7 @@ import java.util.Collection;
 
 public interface OpenSCADReferenceResolver {
 
-    Collection<? extends OpenSCADNamedElement> get(@NotNull final String referencedName,
-                                                   @NotNull final Project project,
-                                                   @NotNull final GlobalSearchScope scope);
+    Collection<? extends OpenSCADNamedElement> resolveByName(@NotNull final String referencedName,
+                                                           @NotNull final Project project,
+                                                           @NotNull final GlobalSearchScope scope);
 }

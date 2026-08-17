@@ -1,7 +1,6 @@
 package com.javampire.openscad.action;
 
 import com.intellij.openapi.actionSystem.ActionManager;
-import com.intellij.openapi.actionSystem.ActionUiKind;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -36,7 +35,7 @@ public class OpenSCADEditorPopupMenuGroup extends DefaultActionGroup implements 
                     event.getDataContext(),
                     childPresentation,
                     event.getPlace(),
-                    ActionUiKind.NONE,
+                    event.getUiKind(),
                     null
             );
             ActionUtil.updateAction(action, childEvent);

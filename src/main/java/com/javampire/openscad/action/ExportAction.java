@@ -59,7 +59,8 @@ public class ExportAction extends OpenSCADExecutableAction {
     @Nullable
     protected String getPreviewFilePath(@NotNull final AnActionEvent event) {
         final VirtualFile sourceFile = getScadFile(event);
-        final FileSaverDescriptor fileSaverDescriptor = new FileSaverDescriptor("Save File", "Choose destination file.", getAvailableExtensions());
+        final FileSaverDescriptor fileSaverDescriptor = (FileSaverDescriptor) new FileSaverDescriptor("Save File", "Choose destination file.")
+                .withExtensionFilter("OpenSCAD export", getAvailableExtensions());
         final FileSaverDialog dialog = FileChooserFactory.getInstance().createSaveFileDialog(fileSaverDescriptor, event.getProject());
         final VirtualFileWrapper vfw = dialog.save(sourceFile.getParent(), sourceFile.getNameWithoutExtension());
         if (vfw == null) {

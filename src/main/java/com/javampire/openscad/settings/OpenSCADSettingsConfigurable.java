@@ -100,15 +100,11 @@ public class OpenSCADSettingsConfigurable implements SearchableConfigurable.Pare
     private void createUIComponents() {
         openSCADExecutablePath = new TextFieldWithBrowseButton();
 
-        final FileChooserDescriptor executableDescriptor = FileChooserDescriptorFactory.createSingleLocalFileDescriptor().withFileFilter(
-                virtualFile -> virtualFile.isInLocalFileSystem() && new File(virtualFile.getPath()).canExecute()
-        );
-        openSCADExecutablePath.addBrowseFolderListener(
-                "Choose OpenSCAD Executable",
-                "Choose OpenSCAD executable",
-                myProject,
-                executableDescriptor
-        );
+        final FileChooserDescriptor executableDescriptor = FileChooserDescriptorFactory.singleFile()
+                .withFileFilter(virtualFile -> virtualFile.isInLocalFileSystem() && new File(virtualFile.getPath()).canExecute())
+                .withTitle("Choose OpenSCAD Executable")
+                .withDescription("Choose OpenSCAD executable");
+        openSCADExecutablePath.addBrowseFolderListener(myProject, executableDescriptor);
     }
 
     @NotNull

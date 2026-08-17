@@ -61,17 +61,46 @@ public class OpenSCADExecutor {
      * @return Null if the OpenSCAD executable is not configured, else this with execution information.
      */
     public static @Nullable OpenSCADExecutor execute(@NotNull final List<String> arguments) {
+        return execute(arguments, true);
+    }
+
+    /**
+     * Execute a command with OpenSCAD executable configured in the settings.
+     * If any, exception during execution is accessible with {@link #getException()}.
+     *
+     * @param arguments Arguments as a list of strings.
+     * @param waitForCompletion When false, launch the process and return without waiting for exit.
+     * @return Null if the OpenSCAD executable is not configured, else this with execution information.
+     */
+    public static @Nullable OpenSCADExecutor execute(@NotNull final List<String> arguments, final boolean waitForCompletion) {
         final OpenSCADSettings settings = OpenSCADSettings.getInstance();
         if (settings.hasExecutable()) {
             final OpenSCADExecutor executor = new OpenSCADExecutor(settings.getOpenSCADExecutable(), arguments);
             ApplicationManager.getApplication().runReadAction(() -> {
-                startAndWaitFor(executor);
+                if (waitForCompletion) {
+                    startAndWaitFor(executor);
+                } else {
+                    startDetached(executor);
+                }
             });
             return executor;
         } else {
             LOG.warn(ERROR_NO_EXE);
             return null;
         }
+    }
+
+    protected static @NotNull OpenSCADExecutor startDetached(@NotNull final OpenSCADExecutor executor) {
+        final ProcessBuilder processBuilder = new ProcessBuilder().command(executor.getCommand());
+        processBuilder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+        processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD);
+        try {
+            processBuilder.start();
+        } catch (final IOException e) {
+            LOG.error("Execution of " + executor.getCommand() + " failed with an exception.", e);
+            executor.exception = e;
+        }
+        return executor;
     }
 
     protected static @NotNull OpenSCADExecutor startAndWaitFor(@NotNull final OpenSCADExecutor executor) {

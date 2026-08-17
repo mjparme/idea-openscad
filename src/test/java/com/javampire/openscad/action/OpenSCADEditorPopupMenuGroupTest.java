@@ -4,62 +4,55 @@ import com.intellij.openapi.actionSystem.ActionPlaces;
 import com.intellij.openapi.actionSystem.ActionUiKind;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
-import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import com.javampire.openscad.OpenSCADLanguage;
 import com.javampire.openscad.settings.OpenSCADSettings;
 
 import java.io.File;
 import java.io.IOException;
 
-public class OpenSCADActionTest extends BasePlatformTestCase {
+public class OpenSCADEditorPopupMenuGroupTest extends BasePlatformTestCase {
 
-    public void testIsOpenScadVirtualFileByExtension() {
-        final var file = myFixture.addFileToProject("model.scad", "cube(1);").getVirtualFile();
-        assertTrue(OpenSCADAction.isOpenScadVirtualFile(file));
-    }
-
-    public void testIsOpenScadContextFromPsiFileInEditorPopup() throws IOException {
+    public void testEditorPopupMenuVisibleForScadFileWithExecutable() throws IOException {
         configureExecutable();
         myFixture.configureByText("model.scad", "cube(1);");
+
+        final OpenSCADEditorPopupMenuGroup group = createPopupMenuGroup();
         final AnActionEvent event = createEditorPopupEvent(myFixture.getFile());
-        assertTrue(OpenSCADAction.isOpenScadContext(event));
+        group.update(event);
+
+        assertTrue("OpenSCAD submenu should be visible in editor popup", event.getPresentation().isVisible());
+        assertTrue("OpenSCAD submenu should be enabled when a child action applies", event.getPresentation().isEnabled());
     }
 
-    public void testIsOpenScadContextFromVirtualFileWhenPsiMissing() throws IOException {
-        configureExecutable();
-        final var virtualFile = myFixture.addFileToProject("model.scad", "cube(1);").getVirtualFile();
-        final AnActionEvent event = AnActionEvent.createEvent(
-                SimpleDataContext.builder()
-                        .add(CommonDataKeys.VIRTUAL_FILE, virtualFile)
-                        .add(CommonDataKeys.PROJECT, myFixture.getProject())
-                        .build(),
-                null,
-                ActionPlaces.EDITOR_POPUP,
-                ActionUiKind.POPUP,
-                null
-        );
-        assertTrue(OpenSCADAction.isOpenScadContext(event));
-    }
-
-    public void testOpenActionHiddenWithoutExecutable() {
+    public void testEditorPopupMenuHiddenWithoutExecutable() {
         OpenSCADSettings.getInstance().setOpenSCADExecutable(null);
         myFixture.configureByText("model.scad", "cube(1);");
-        final OpenAction action = new OpenAction();
+
+        final OpenSCADEditorPopupMenuGroup group = createPopupMenuGroup();
         final AnActionEvent event = createEditorPopupEvent(myFixture.getFile());
-        action.update(event);
-        assertFalse(event.getPresentation().isVisible());
+        group.update(event);
+
+        assertFalse("OpenSCAD submenu should be hidden without an executable", event.getPresentation().isVisible());
     }
 
-    public void testOpenActionVisibleWithExecutable() throws IOException {
+    public void testEditorPopupMenuHiddenForNonScadFile() throws IOException {
         configureExecutable();
-        myFixture.configureByText("model.scad", "cube(1);");
-        final OpenAction action = new OpenAction();
+        myFixture.configureByText("readme.txt", "not openscad");
+
+        final OpenSCADEditorPopupMenuGroup group = createPopupMenuGroup();
         final AnActionEvent event = createEditorPopupEvent(myFixture.getFile());
-        action.update(event);
-        assertTrue(event.getPresentation().isVisible());
-        assertTrue(event.getPresentation().isEnabled());
+        group.update(event);
+
+        assertFalse("OpenSCAD submenu should be hidden for non-.scad files", event.getPresentation().isVisible());
+    }
+
+    private static OpenSCADEditorPopupMenuGroup createPopupMenuGroup() {
+        final OpenSCADEditorPopupMenuGroup group = new OpenSCADEditorPopupMenuGroup();
+        group.add(new OpenAction());
+        group.add(new ExportAction());
+        group.add(new RefreshPreviewAction());
+        return group;
     }
 
     private static AnActionEvent createEditorPopupEvent(com.intellij.psi.PsiFile psiFile) {

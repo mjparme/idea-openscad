@@ -74,7 +74,7 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
         if (resolver == null) {
             return ResolveResult.EMPTY_ARRAY;
         }
-        final Collection<? extends OpenSCADNamedElement> elementResults = resolver.get(
+        final Collection<? extends OpenSCADNamedElement> elementResults = resolver.resolveByName(
                 this.referencedName, project, GlobalSearchScope.allScope(project)
         );
         LOG.debug("multiResolve elementResults:" + elementResults);
@@ -125,7 +125,7 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
         if (resolver == null) {
             return ResolveResult.EMPTY_ARRAY;
         }
-        final Collection<? extends OpenSCADNamedElement> elementResults = resolver.get(
+        final Collection<? extends OpenSCADNamedElement> elementResults = resolver.resolveByName(
                 referencedName, project, GlobalSearchScope.allScope(project)
         );
         final List<ResolveResult> results = new ArrayList<>();
@@ -205,7 +205,7 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
     @NotNull
     private ResolveResult[] resolveIndexedReferences(@NotNull OpenSCADReferenceResolver resolver) {
         Project project = myElement.getProject();
-        final Collection<? extends OpenSCADNamedElement> elementResults = resolver.get(
+        final Collection<? extends OpenSCADNamedElement> elementResults = resolver.resolveByName(
                 referencedName, project, GlobalSearchScope.allScope(project)
         );
         if (elementResults.isEmpty()) {

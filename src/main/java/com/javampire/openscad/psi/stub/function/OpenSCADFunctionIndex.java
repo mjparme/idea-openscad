@@ -28,7 +28,7 @@ public class OpenSCADFunctionIndex extends StringStubIndexExtension<OpenSCADFunc
     }
 
     @Override
-    public Collection<OpenSCADFunctionDeclaration> get(@NotNull final String functionName, @NotNull final Project project, @NotNull final GlobalSearchScope scope) {
+    public Collection<OpenSCADFunctionDeclaration> resolveByName(@NotNull final String functionName, @NotNull final Project project, @NotNull final GlobalSearchScope scope) {
         return StubIndex.getElements(getKey(), functionName, project, scope, OpenSCADFunctionDeclaration.class);
     }
 

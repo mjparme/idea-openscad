@@ -31,4 +31,9 @@ public class OpenAction extends OpenSCADExecutableAction {
     protected List<String> getArguments(@NotNull final AnActionEvent event) {
         return Collections.singletonList(event.getData(CommonDataKeys.VIRTUAL_FILE).getPath());
     }
+
+    @Override
+    protected boolean waitForProcessCompletion() {
+        return false;
+    }
 }

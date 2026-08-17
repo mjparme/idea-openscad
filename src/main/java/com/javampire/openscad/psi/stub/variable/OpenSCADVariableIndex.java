@@ -30,9 +30,9 @@ public class OpenSCADVariableIndex
     }
 
     @Override
-    public Collection<OpenSCADVariableDeclaration> get(@NotNull final String variableName,
-                                                       @NotNull final Project project,
-                                                       @NotNull final GlobalSearchScope scope) {
+    public Collection<OpenSCADVariableDeclaration> resolveByName(@NotNull final String variableName,
+                                                               @NotNull final Project project,
+                                                               @NotNull final GlobalSearchScope scope) {
         return StubIndex.getElements(getKey(), variableName, project, null, OpenSCADVariableDeclaration.class);
     }
 

@@ -60,6 +60,11 @@ public class BaseParsingTest extends ParsingTestCase {
     }
 
     @Test
+    public void testfloorModuleCall() throws IOException {
+        doTest("_psidump");
+    }
+
+    @Test
     public void testfor() throws IOException {
         doTest("_psidump");
     }

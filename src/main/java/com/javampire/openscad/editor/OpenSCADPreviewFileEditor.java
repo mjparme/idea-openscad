@@ -1,7 +1,20 @@
 package com.javampire.openscad.editor;
 
+import com.intellij.openapi.Disposable;
 import com.intellij.ide.util.PropertiesComponent;
-import com.intellij.openapi.actionSystem.*;
+import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.ActionPlaces;
+import com.intellij.openapi.actionSystem.ActionToolbar;
+import com.intellij.openapi.actionSystem.ActionUiKind;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.actionSystem.DataSink;
+import com.intellij.openapi.actionSystem.DefaultActionGroup;
+import com.intellij.openapi.actionSystem.Presentation;
+import com.intellij.openapi.actionSystem.Separator;
+import com.intellij.openapi.actionSystem.UiDataProvider;
 import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ApplicationManager;
@@ -14,9 +27,9 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.UserDataHolderBase;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileEvent;
-import com.intellij.openapi.vfs.VirtualFileListener;
 import com.intellij.openapi.vfs.VirtualFileManager;
+import com.intellij.openapi.vfs.newvfs.BulkFileListener;
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.ui.JBColor;
@@ -40,6 +53,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.HierarchyEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
+import java.util.List;
 
 import static com.intellij.openapi.fileEditor.TextEditorWithPreview.Layout.SHOW_EDITOR;
 
@@ -56,7 +70,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     private @Nullable JCEFHtmlPanel htmlPanel;
     private ActionToolbar previewToolbar;
     private final Alarm mySwingAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
-    private @Nullable VirtualFileListener saveListener;
+    private @Nullable Disposable vfsListenerDisposable;
 
     private OpenSCADPreviewFileEditorConfiguration editorConfig = new OpenSCADPreviewFileEditorConfiguration(this);
 
@@ -234,51 +248,59 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
      */
     private void generatePreview() {
         final AnAction generatePreviewAction = new GeneratePreviewAction();
-        final AnActionEvent event = AnActionEvent.createFromDataContext(
-                ActionPlaces.UNKNOWN,
+        final DataContext dataContext = SimpleDataContext.builder()
+                .add(OpenSCADDataKeys.PREVIEW_EDITOR, OpenSCADPreviewFileEditor.this)
+                .build();
+        final AnActionEvent event = AnActionEvent.createEvent(
+                dataContext,
                 new Presentation(GeneratePreviewAction.TEXT),
-                SimpleDataContext.builder()
-                        .add(OpenSCADDataKeys.PREVIEW_EDITOR, OpenSCADPreviewFileEditor.this)
-                        .build()
+                ActionPlaces.UNKNOWN,
+                ActionUiKind.NONE,
+                null
         );
-        ActionUtil.performActionDumbAwareWithCallbacks(generatePreviewAction, event);
+        ActionUtil.performAction(generatePreviewAction, event);
     }
 
     private void registerSaveListener() {
-        if (saveListener != null) {
+        if (vfsListenerDisposable != null) {
             return;
         }
-        saveListener = new VirtualFileListener() {
+        vfsListenerDisposable = Disposer.newDisposable("OpenSCADPreviewSaveListener");
+        project.getMessageBus().connect(vfsListenerDisposable).subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
             @Override
-            public void contentsChanged(@NotNull final VirtualFileEvent event) {
-                if (event.isFromSave() && scadFile.equals(event.getFile())
-                        && Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
-                    refreshPreviewOnSave();
+            public void after(@NotNull final List<? extends VFileEvent> events) {
+                for (final VFileEvent event : events) {
+                    if (event.isFromSave() && scadFile.equals(event.getFile())
+                            && Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
+                        refreshPreviewOnSave();
+                    }
                 }
             }
-        };
-        VirtualFileManager.getInstance().addVirtualFileListener(saveListener);
+        });
     }
 
     private void unregisterSaveListener() {
-        if (saveListener != null) {
-            VirtualFileManager.getInstance().removeVirtualFileListener(saveListener);
-            saveListener = null;
+        if (vfsListenerDisposable != null) {
+            Disposer.dispose(vfsListenerDisposable);
+            vfsListenerDisposable = null;
         }
     }
 
     private void refreshPreviewOnSave() {
         final AnAction refreshPreviewAction = new RefreshPreviewAction();
-        final AnActionEvent event = AnActionEvent.createFromDataContext(
-                ActionPlaces.UNKNOWN,
+        final DataContext dataContext = SimpleDataContext.builder()
+                .add(OpenSCADDataKeys.PREVIEW_EDITOR, OpenSCADPreviewFileEditor.this)
+                .add(CommonDataKeys.PROJECT, project)
+                .add(CommonDataKeys.VIRTUAL_FILE, scadFile)
+                .build();
+        final AnActionEvent event = AnActionEvent.createEvent(
+                dataContext,
                 new Presentation(RefreshPreviewAction.TEXT),
-                SimpleDataContext.builder()
-                        .add(OpenSCADDataKeys.PREVIEW_EDITOR, OpenSCADPreviewFileEditor.this)
-                        .add(CommonDataKeys.PROJECT, project)
-                        .add(CommonDataKeys.VIRTUAL_FILE, scadFile)
-                        .build()
+                ActionPlaces.UNKNOWN,
+                ActionUiKind.NONE,
+                null
         );
-        ActionUtil.performActionDumbAwareWithCallbacks(refreshPreviewAction, event);
+        ActionUtil.performAction(refreshPreviewAction, event);
     }
 
     @Override

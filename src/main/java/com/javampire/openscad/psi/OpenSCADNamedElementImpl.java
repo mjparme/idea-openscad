@@ -75,6 +75,21 @@ public abstract class OpenSCADNamedElementImpl extends ASTWrapperPsiElement impl
             return node.findChildByType(TEST_EXP_REF_KEYWORDS);
         } else if (node.getElementType() == OpenSCADTypes.COMMON_OP_REF) {
             return node.findChildByType(COMMON_OP_REF_KEYWORDS);
+        } else if (node.getElementType() == OpenSCADTypes.MODULE_OBJ_NAME_REF
+                || node.getElementType() == OpenSCADTypes.MODULE_OP_NAME_REF) {
+            final ASTNode identifier = node.findChildByType(OpenSCADTypes.IDENTIFIER);
+            if (identifier != null) {
+                return identifier;
+            }
+            final ASTNode builtinExpr = node.findChildByType(OpenSCADTypes.BUILTIN_EXPR_REF);
+            if (builtinExpr != null) {
+                return builtinExpr.findChildByType(BUILTIN_EXPR_REF_KEYWORDS);
+            }
+            for (ASTNode child = node.getFirstChildNode(); child != null; child = child.getTreeNext()) {
+                if (MODULE_CALLABLE_NAME_KEYWORDS.contains(child.getElementType())) {
+                    return child;
+                }
+            }
         } else if (node.getElementType() == OpenSCADTypes.IMPORT) {
             final PsiElement pathElement = PsiTreeUtil.findChildOfType(node.getPsi(), OpenSCADImportPathRef.class);
             if (pathElement != null) {

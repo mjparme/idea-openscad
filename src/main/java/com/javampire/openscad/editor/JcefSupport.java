@@ -1,7 +1,8 @@
 package com.javampire.openscad.editor;
 
-import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction.CannotReadException;
+import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +37,7 @@ final class JcefSupport {
     @Nullable
     private static Boolean tryDetectSupport() {
         try {
-            return ReadAction.compute(JcefSupport::detectSupportUnderReadLock);
+            return ApplicationManager.getApplication().runReadAction((Computable<Boolean>) JcefSupport::detectSupportUnderReadLock);
         }
         catch (CannotReadException e) {
             LOG.debug("JCEF support check deferred until read lock is available");

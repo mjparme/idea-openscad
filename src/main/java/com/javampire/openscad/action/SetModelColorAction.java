@@ -5,7 +5,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.ui.ColorPicker;
+import com.intellij.ui.ColorChooserService;
 import com.intellij.ui.awt.RelativePoint;
 import com.javampire.openscad.OpenSCADIcons;
 import com.javampire.openscad.editor.OpenSCADPreviewFileEditor;
@@ -44,7 +44,7 @@ public class SetModelColorAction extends OpenSCADAction {
 
         if (previewFileEditor != null) {
             final OpenSCADPreviewFileEditorConfiguration editorConfig = previewFileEditor.getEditorConfig();
-            ColorPicker.showColorPickerPopup(
+            ColorChooserService.getInstance().showPopup(
                     event.getProject(),
                     editorConfig.getModelColor(),
                     (color, source) -> editorConfig.updateModelColor(color),

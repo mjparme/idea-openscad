@@ -1,6 +1,11 @@
 package com.javampire.openscad.action;
 
-import com.intellij.openapi.actionSystem.*;
+import com.intellij.openapi.actionSystem.ActionUiKind;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.ActionUpdateThread;
+import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.TextEditorWithPreview;
@@ -34,7 +39,7 @@ public abstract class OpenSCADAction extends AnAction implements DumbAware {
             presentation.setEnabledAndVisible(false);
             return presentation;
         }
-        if (isSupportedActionPlace(event.getPlace())) {
+        if (isSupportedActionPlace(event)) {
             presentation.setEnabledAndVisible(isOpenScadContext(event));
         } else {
             presentation.setEnabledAndVisible(false);
@@ -42,11 +47,9 @@ public abstract class OpenSCADAction extends AnAction implements DumbAware {
         return presentation;
     }
 
-    static boolean isSupportedActionPlace(@NotNull final String place) {
-        return ActionPlaces.isPopupPlace(place)
-                || ActionPlaces.EDITOR_POPUP.equals(place)
-                || ActionPlaces.EDITOR_TAB_POPUP.equals(place)
-                || ActionPlaces.EDITOR_TOOLBAR.equals(place);
+    static boolean isSupportedActionPlace(@NotNull final AnActionEvent event) {
+        final ActionUiKind uiKind = event.getUiKind();
+        return uiKind instanceof ActionUiKind.Toolbar || uiKind instanceof ActionUiKind.Popup;
     }
 
     static boolean isOpenScadContext(@NotNull final AnActionEvent event) {
