@@ -1,7 +1,5 @@
-import { createOpenSCAD } from "openscad-wasm";
-
-/** @type {import("openscad-wasm").OpenSCADInstance | null} */
-let openscad = null;
+/** @type {object | null} */
+let openscadInstance = null;
 let rendering = false;
 /** @type {{ generation: number, mainPath: string, files: Record<string, string> } | null} */
 let pendingRequest = null;
@@ -35,36 +33,82 @@ function mountFiles(instance, files) {
   }
 }
 
+/** @param {string[]} logs */
+function summarizeRenderIssues(logs) {
+  const text = logs.join("");
+  const issues = [];
+
+  if (/CGAL error/i.test(text)) {
+    issues.push(
+      "OpenSCAD CGAL error while evaluating geometry (often hull() or rotate_extrude). "
+        + "The preview may be incomplete; native OpenSCAD may render this model correctly.",
+    );
+  }
+
+  const errorMatch = text.match(/ERROR:\s*[^\n\r]+/);
+  if (errorMatch && !issues.some((issue) => issue.includes(errorMatch[0]))) {
+    issues.push(errorMatch[0].trim());
+  }
+
+  const warningMatch = text.match(/WARNING:\s*[^\n\r]+/);
+  if (warningMatch) {
+    issues.push(warningMatch[0].trim());
+  }
+
+  return issues;
+}
+
+async function getOpenSCADInstance(print, printErr) {
+  if (openscadInstance) {
+    return openscadInstance;
+  }
+  self.postMessage({ type: "status", message: "Loading OpenSCAD WASM..." });
+  const vendorDir = "vendor/openscad";
+  const moduleFile = "openscad.js";
+  const moduleUrl = new URL(`${vendorDir}/${moduleFile}`, self.location.href);
+  const module = await import(/* webpackIgnore: true */ moduleUrl.href);
+  const OpenSCAD = module.default;
+  openscadInstance = await OpenSCAD({
+    noInitialRun: true,
+    // Keep the WASM runtime alive between exports so auto-refresh can call callMain again.
+    noExitRuntime: true,
+    print,
+    printErr,
+  });
+  return openscadInstance;
+}
+
+function discardOpenSCADInstance() {
+  openscadInstance = null;
+}
+
 async function renderNow(request) {
   rendering = true;
   const { generation, mainPath, files } = request;
   const outputPath = `/preview-${generation}.stl`;
+  /** @type {string[]} */
+  const renderLogs = [];
+
+  const appendLog = (text) => {
+    renderLogs.push(text);
+    self.postMessage({ type: "log", message: text });
+  };
 
   try {
-    if (!openscad) {
-      self.postMessage({ type: "status", message: "Loading OpenSCAD WASM..." });
-      openscad = await createOpenSCAD({
-        print: (text) => self.postMessage({ type: "log", message: text }),
-        printErr: (text) => self.postMessage({ type: "log", message: text }),
-      });
-    }
-
-    const instance = openscad.getInstance();
+    const instance = await getOpenSCADInstance(appendLog, appendLog);
     mountFiles(instance, files);
     unlinkIfExists(instance, outputPath);
 
-    const exitCode = instance.callMain([
-      mainPath,
-      "--enable=manifold",
-      "-o",
-      outputPath,
-    ]);
+    const exitCode = instance.callMain([mainPath, "--backend=manifold", "-o", outputPath]);
 
     if (exitCode !== 0) {
+      discardOpenSCADInstance();
+      const issues = summarizeRenderIssues(renderLogs);
+      const detail = issues.length ? issues.join(" ") : `OpenSCAD exited with code ${exitCode}`;
       self.postMessage({
         type: "error",
         generation,
-        message: `OpenSCAD exited with code ${exitCode}`,
+        message: detail,
       });
       return;
     }
@@ -72,11 +116,14 @@ async function renderNow(request) {
     const stlBytes = instance.FS.readFile(outputPath);
     unlinkIfExists(instance, outputPath);
 
+    const warnings = summarizeRenderIssues(renderLogs);
+
     self.postMessage(
-      { type: "done", generation, stl: stlBytes.buffer },
+      { type: "done", generation, stl: stlBytes.buffer, warnings },
       [stlBytes.buffer],
     );
   } catch (error) {
+    discardOpenSCADInstance();
     self.postMessage({
       type: "error",
       generation,

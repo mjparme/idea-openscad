@@ -12,7 +12,14 @@ module.exports = {
   },
   plugins: [
     new CopyPlugin({
-      patterns: [{ from: "./src/main/javascript/dist" }],
+      patterns: [
+        { from: "./src/main/javascript/dist" },
+        {
+          from: "./src/main/javascript/vendor/openscad",
+          to: "vendor/openscad",
+          noErrorOnMissing: true,
+        },
+      ],
     }),
     new CleanWebpackPlugin({
       protectWebpackAssets: false,

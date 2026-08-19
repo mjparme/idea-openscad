@@ -23,6 +23,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.UserDataHolderBase;
+import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.vfs.newvfs.BulkFileListener;
@@ -71,6 +72,8 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     private final Alarm mySwingAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
     private final Alarm previewRefreshAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
     private @Nullable Disposable vfsListenerDisposable;
+    /** Set when a save arrives before JCEF is attached; consumed on next render. */
+    private boolean pendingRefreshOnSave;
 
     private OpenSCADPreviewFileEditorConfiguration editorConfig = new OpenSCADPreviewFileEditorConfiguration(this);
 
@@ -120,12 +123,15 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     }
 
     private void scheduleRefreshIfAttached() {
-        if (htmlPanel == null) {
-            return;
-        }
         mySwingAlarm.addRequest(
                 () -> {
-                    if (htmlPanel != null && Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
+                    if (!Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
+                        return;
+                    }
+                    if (pendingRefreshOnSave || htmlPanel == null) {
+                        scheduleRefreshPreviewOnSave();
+                    }
+                    else {
                         refreshPreviewOnSave();
                     }
                 },
@@ -205,6 +211,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
             @Override
             public void onLoadEnd(final CefBrowser browser, final CefFrame frame, final int httpStatusCode) {
                 if (frame.isMain()) {
+                    pendingRefreshOnSave = false;
                     renderWasmPreview();
                 }
             }
@@ -300,20 +307,21 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
                     public void afterDocumentSaved(@NotNull final Document document) {
                         final VirtualFile file = FileDocumentManager.getInstance().getFile(document);
                         if (file != null && isSameScadFile(file)) {
-                            scheduleRefreshPreviewOnSave();
+                            onScadFileSaved();
                         }
                     }
                 });
+        // l2trace99/openscad-plugin listens to all VFS content changes for the file (not only isFromSave).
         project.getMessageBus().connect(vfsListenerDisposable).subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
             @Override
             public void after(@NotNull final List<? extends VFileEvent> events) {
                 for (final VFileEvent event : events) {
-                    if (!(event instanceof VFileContentChangeEvent contentChange) || !contentChange.isFromSave()) {
+                    if (!(event instanceof VFileContentChangeEvent)) {
                         continue;
                     }
                     final VirtualFile file = event.getFile();
                     if (file != null && isSameScadFile(file)) {
-                        scheduleRefreshPreviewOnSave();
+                        onScadFileSaved();
                     }
                 }
             }
@@ -321,19 +329,53 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
     }
 
     private boolean isSameScadFile(@NotNull final VirtualFile file) {
-        return file.equals(scadFile);
+        return VfsUtilCore.pathEqualsTo(file, scadFile.getPath());
+    }
+
+    /**
+     * Called when the main .scad file is saved or its VFS content changes.
+     * Debounced; attaches JCEF if the preview pane is visible but not yet loaded.
+     */
+    private void onScadFileSaved() {
+        if (!Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
+            return;
+        }
+        ApplicationManager.getApplication().invokeLater(
+                this::scheduleRefreshPreviewOnSave,
+                ModalityState.stateForComponent(getComponent())
+        );
     }
 
     private void scheduleRefreshPreviewOnSave() {
-        if (!Boolean.TRUE.equals(editorConfig.getAutoRefresh()) || htmlPanel == null) {
+        if (!Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
+            pendingRefreshOnSave = false;
             return;
+        }
+        pendingRefreshOnSave = true;
+        if (mainPanel.isShowing()) {
+            scheduleAttachHtmlPanel();
         }
         previewRefreshAlarm.cancelAllRequests();
         previewRefreshAlarm.addRequest(
-                this::refreshPreviewOnSave,
+                this::performScheduledRefreshOnSave,
                 150,
                 ModalityState.stateForComponent(getComponent())
         );
+    }
+
+    private void performScheduledRefreshOnSave() {
+        if (!Boolean.TRUE.equals(editorConfig.getAutoRefresh())) {
+            pendingRefreshOnSave = false;
+            return;
+        }
+        if (htmlPanel == null) {
+            if (mainPanel.isShowing()) {
+                scheduleAttachHtmlPanel();
+            }
+            return;
+        }
+        pendingRefreshOnSave = false;
+        refreshPreviewOnSave();
     }
 
     private void unregisterSaveListener() {
@@ -440,16 +482,22 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         private final static String SHOW_AXIS = "showAxis";
         private final static String SHOW_GRID = "showGrid";
         private final static String MODEL_COLOR = "modelColor";
+        private final static String PREVIEW_WARNING = "previewWarning";
+        private final static String PREVIEW_ERROR = "previewError";
 
         @Override
         public boolean onQuery(CefBrowser browser, CefFrame frame, long queryId, String request, boolean persistent, CefQueryCallback callback) {
-            final String[] parsed = request.split(DELIMITER);
+            final String[] parsed = request.split(DELIMITER, 2);
             if (SHOW_AXIS.equals(parsed[0])) {
                 editorConfig.setShowAxis(Boolean.valueOf(parsed[1]));
             } else if (SHOW_GRID.equals(parsed[0])) {
                 editorConfig.setShowGrid(Boolean.valueOf(parsed[1]));
             } else if (MODEL_COLOR.equals(parsed[0])) {
                 editorConfig.setModelColor(JBColor.decode(parsed[1]));
+            } else if (PREVIEW_WARNING.equals(parsed[0])) {
+                LOG.warn("OpenSCAD WASM preview: " + parsed[1]);
+            } else if (PREVIEW_ERROR.equals(parsed[0])) {
+                LOG.error("OpenSCAD WASM preview: " + parsed[1]);
             } else {
                 LOG.info("Preview: " + request);
                 callback.success("");

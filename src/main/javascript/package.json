@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "openscad-wasm": "0.0.4",
     "three": "0.159.0"
   }
 }

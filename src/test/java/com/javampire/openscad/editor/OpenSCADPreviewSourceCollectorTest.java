@@ -31,6 +31,60 @@ public class OpenSCADPreviewSourceCollectorTest extends BasePlatformTestCase {
         assertTrue(sources.files().containsKey("/work/lib/part.scad"));
     }
 
+    public void testCollectRelativeUseImports() {
+        myFixture.addFileToProject("lib/cubes.scad", "module taperedCube() cube(1);");
+        myFixture.addFileToProject("lib/patterns.scad", "module cubes() cube(1);");
+        myFixture.addFileToProject("lib/shapes.scad", "module fillet() cube(1);");
+        final var main = myFixture.addFileToProject("bird-feeder/squareBirdFeeder.scad", """
+                use <../lib/cubes.scad>
+                use <../lib/patterns.scad>
+                use <../lib/shapes.scad>
+                taperedCube();
+                """);
+        final var sources = OpenSCADPreviewSourceCollector.collect(
+                myFixture.getProject(),
+                main.getVirtualFile()
+        );
+        assertNotNull(sources);
+        assertEquals("/work/bird-feeder/squareBirdFeeder.scad", sources.mainPath());
+        assertTrue(sources.files().containsKey("/work/lib/cubes.scad"));
+        assertTrue(sources.files().containsKey("/work/lib/patterns.scad"));
+        assertTrue(sources.files().containsKey("/work/lib/shapes.scad"));
+    }
+
+    public void testCollectBoslLibraryImportPaths() {
+        myFixture.addFileToProject("lib/bosl/math.scad", "function noop() = 0;");
+        myFixture.addFileToProject("lib/bosl/beziers.scad", """
+                use <BOSL/math.scad>
+                function bezier() = noop();
+                """);
+        final var main = myFixture.addFileToProject("models/main.scad", """
+                use <../lib/bosl/beziers.scad>
+                bezier();
+                """);
+        final var sources = OpenSCADPreviewSourceCollector.collect(
+                myFixture.getProject(),
+                main.getVirtualFile()
+        );
+        assertNotNull(sources);
+        assertTrue(sources.files().containsKey("/work/lib/bosl/beziers.scad"));
+        assertTrue(sources.files().containsKey("/work/BOSL/math.scad"));
+        assertEquals(
+                "/work/BOSL/math.scad",
+                OpenSCADPreviewSourceCollector.resolveImportVirtualPath("/work/lib/bosl/beziers.scad", "BOSL/math.scad")
+        );
+    }
+
+    public void testCollectImportPathsFromText() {
+        final var paths = OpenSCADPreviewSourceCollector.collectImportPathsFromText("""
+                use <../lib/cubes.scad>
+                include <config.scad>
+                """);
+        assertEquals(2, paths.size());
+        assertEquals("../lib/cubes.scad", paths.get(0));
+        assertEquals("config.scad", paths.get(1));
+    }
+
     public void testGetFileContentUsesDocumentText() {
         final var file = myFixture.addFileToProject("model.scad", "cube(1);");
         final var document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()
