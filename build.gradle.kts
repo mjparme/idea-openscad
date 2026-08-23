@@ -42,21 +42,27 @@ tasks.processResources {
     dependsOn("webpack")
 }
 
-tasks.register<Exec>("syncOfficialOpenScadWasm") {
+val openscadWasmBuild = layout.projectDirectory.dir("../openscad-wasm/build")
+val openscadWasmVendor = layout.projectDirectory.dir("src/main/javascript/vendor/openscad")
+
+tasks.register<Copy>("syncOfficialOpenScadWasm") {
     group = "build"
     description = "Copy official openscad-wasm build artifacts into the preview vendor folder"
-    workingDir = layout.projectDirectory.asFile
-    commandLine("bash", "scripts/sync-official-openscad-wasm.sh")
+    notCompatibleWithConfigurationCache("Optional sync from sibling openscad-wasm build directory")
+    from(openscadWasmBuild) {
+        include("openscad.js", "openscad.wasm.js", "openscad.wasm")
+    }
+    into(openscadWasmVendor)
     onlyIf {
-        layout.projectDirectory.dir("../openscad-wasm/build").file("openscad.wasm").asFile.exists()
+        project.file("../openscad-wasm/build/openscad.wasm").exists()
     }
 }
 
 tasks.register<Exec>("webpack") {
     group = "build"
     description = "Bundle preview web assets (Three.js + optional WASM) into generated-resources/html"
-    workingDir = layout.projectDirectory.asFile
     dependsOn("syncOfficialOpenScadWasm")
+    workingDir(layout.projectDirectory)
     commandLine("npx", "webpack")
     inputs.dir("src/main/javascript")
     inputs.files("webpack.config.js", "package.json", "src/main/javascript/package.json")

@@ -75,6 +75,63 @@ public class OpenSCADPreviewSourceCollectorTest extends BasePlatformTestCase {
         );
     }
 
+    public void testCollectBosl2StdTransitiveIncludes() {
+        myFixture.addFileToProject("lib/bosl2/constants.scad", "CENTER = [0, 0, 0];");
+        myFixture.addFileToProject("lib/bosl2/std.scad", """
+                include <constants.scad>
+                """);
+        final var main = myFixture.addFileToProject("clock/moon-clock/moonClock.scad", """
+                include <../../lib/bosl2/std.scad>
+                """);
+        final var sources = OpenSCADPreviewSourceCollector.collect(
+                myFixture.getProject(),
+                main.getVirtualFile()
+        );
+        assertNotNull(sources);
+        assertTrue(sources.files().containsKey("/work/lib/bosl2/std.scad"));
+        assertTrue(sources.files().containsKey("/work/lib/bosl2/constants.scad"));
+    }
+
+    public void testResolveImportVirtualPathLibraryPrefix() {
+        assertEquals(
+                "/work/BOSL2/std.scad",
+                OpenSCADPreviewSourceCollector.resolveImportVirtualPath("/work/clock/moon-clock/moonClock.scad", "BOSL2/std.scad")
+        );
+        assertEquals(
+                "/work/MCAD/util.scad",
+                OpenSCADPreviewSourceCollector.resolveImportVirtualPath("/work/models/main.scad", "MCAD/util.scad")
+        );
+        assertEquals(
+                "/work/models/lib/part.scad",
+                OpenSCADPreviewSourceCollector.resolveImportVirtualPath("/work/models/main.scad", "lib/part.scad")
+        );
+    }
+
+    public void testUsesLibrarySearchPath() {
+        assertTrue(OpenSCADPreviewSourceCollector.usesLibrarySearchPath("BOSL2/std.scad"));
+        assertTrue(OpenSCADPreviewSourceCollector.usesLibrarySearchPath("MCAD/foo.scad"));
+        assertFalse(OpenSCADPreviewSourceCollector.usesLibrarySearchPath("../lib/bosl2/std.scad"));
+        assertFalse(OpenSCADPreviewSourceCollector.usesLibrarySearchPath("constants.scad"));
+        assertFalse(OpenSCADPreviewSourceCollector.usesLibrarySearchPath("lib/bosl2/std.scad"));
+    }
+
+    public void testCollectBosl2LibraryPrefixImport() {
+        myFixture.addFileToProject("BOSL2/constants.scad", "CENTER = [0, 0, 0];");
+        myFixture.addFileToProject("BOSL2/std.scad", """
+                include <constants.scad>
+                """);
+        final var main = myFixture.addFileToProject("models/main.scad", """
+                include <BOSL2/std.scad>
+                """);
+        final var sources = OpenSCADPreviewSourceCollector.collect(
+                myFixture.getProject(),
+                main.getVirtualFile()
+        );
+        assertNotNull(sources);
+        assertTrue(sources.files().containsKey("/work/BOSL2/std.scad"));
+        assertTrue(sources.files().containsKey("/work/BOSL2/constants.scad"));
+    }
+
     public void testCollectImportPathsFromText() {
         final var paths = OpenSCADPreviewSourceCollector.collectImportPathsFromText("""
                 use <../lib/cubes.scad>

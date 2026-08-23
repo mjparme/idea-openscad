@@ -6,12 +6,18 @@
 
 ### Added
 
+- In-browser 3D preview via openscad-wasm (Manifold backend) with bundled Three.js viewer; preview works without a native OpenSCAD install
+
 ### Changed
+
+- Preview source collector bundles transitive `use`/`include` dependencies and resolves library-prefix imports (`BOSL2/`, `MCAD/`, etc.) from project roots and OpenSCAD library paths
+- `syncOfficialOpenScadWasm` Gradle task copies artifacts from a sibling `openscad-wasm` build instead of shelling out to a script
 
 ### Removed
 
 ### Fixed
 
+- WASM preview bundling for BOSL2 projects (e.g. transitive `constants.scad` via `std.scad`, relative `lib/bosl2/` paths)
 - Deprecated and scheduled-for-removal IntelliJ Platform API usages migrated to clear Plugin Verifier warnings
 - Editor context menu: OpenSCAD submenu visible again in editor popup
 - Open in OpenSCAD: launch detached so the background task completes immediately instead of waiting for the GUI to exit

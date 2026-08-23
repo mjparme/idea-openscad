@@ -4,13 +4,18 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.roots.OrderRootType;
 import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.openapi.roots.ProjectRootManager;
+import com.intellij.openapi.roots.libraries.Library;
+import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.javampire.openscad.psi.OpenSCADImportUtil;
+import com.javampire.openscad.settings.OpenSCADInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,7 +34,8 @@ import java.util.regex.Pattern;
  * Collects OpenSCAD source files for in-browser WASM preview, including transitive imports.
  * <p>
  * Uses text scanning for {@code use}/{@code include} paths so preview bundling matches OpenSCAD's
- * import graph even when PSI resolution is incomplete. Falls back to VFS lookup under the content root.
+ * import graph even when PSI resolution is incomplete. Falls back to VFS lookup under the content root
+ * and OpenSCAD library paths.
  */
 public final class OpenSCADPreviewSourceCollector {
 
@@ -68,11 +74,12 @@ public final class OpenSCADPreviewSourceCollector {
         final Map<String, String> files = new LinkedHashMap<>();
         final Set<String> visitedPaths = new java.util.HashSet<>();
         final Queue<PendingFile> queue = new ArrayDeque<>();
+        final List<String> libraryRoots = collectLibraryRoots();
         queue.add(new PendingFile(mainPath, mainPsiFile, scadFile));
 
         while (!queue.isEmpty()) {
             final PendingFile pending = queue.remove();
-            if (!visitedPaths.add(pending.virtualPath())) {
+            if (visitedPaths.contains(pending.virtualPath())) {
                 continue;
             }
 
@@ -81,6 +88,7 @@ public final class OpenSCADPreviewSourceCollector {
                 LOG.warn("OpenSCAD preview: could not read " + pending.virtualPath());
                 continue;
             }
+            visitedPaths.add(pending.virtualPath());
             files.put(pending.virtualPath(), content);
 
             final String projectRelativePath = toProjectRelativePath(pending.virtualPath());
@@ -93,6 +101,7 @@ public final class OpenSCADPreviewSourceCollector {
                 final PendingFile imported = resolveImportedFile(
                         project,
                         contentRoot,
+                        libraryRoots,
                         pending.psiFile(),
                         pending.virtualFile(),
                         projectRelativePath,
@@ -124,19 +133,15 @@ public final class OpenSCADPreviewSourceCollector {
     @Nullable
     private static PendingFile resolveImportedFile(@NotNull final Project project,
                                                    @NotNull final VirtualFile contentRoot,
+                                                   @NotNull final List<String> libraryRoots,
                                                    @Nullable final PsiFile importerPsiFile,
                                                    @Nullable final VirtualFile importerVirtualFile,
                                                    @NotNull final String importerProjectRelativePath,
                                                    @NotNull final String importPath,
                                                    @NotNull final String importVirtualPath) {
-        if (importerPsiFile != null) {
-            for (final PsiFile target : OpenSCADImportUtil.resolveImportFiles(importerPsiFile, importPath)) {
-                return new PendingFile(importVirtualPath, target, target.getVirtualFile());
-            }
-        }
-
-        if (importerVirtualFile != null && importerVirtualFile.getParent() != null && !importPath.startsWith("BOSL/")) {
-            final VirtualFile resolved = importerVirtualFile.getParent().findFileByRelativePath(importPath);
+        final VirtualFile importerOnDisk = firstNonNull(importerVirtualFile, psiVirtualFile(importerPsiFile));
+        if (importerOnDisk != null && importerOnDisk.getParent() != null) {
+            final VirtualFile resolved = importerOnDisk.getParent().findFileByRelativePath(importPath);
             if (resolved != null && !resolved.isDirectory()) {
                 final PsiFile psiFile = PsiManager.getInstance(project).findFile(resolved);
                 return new PendingFile(importVirtualPath, psiFile, resolved);
@@ -150,7 +155,85 @@ public final class OpenSCADPreviewSourceCollector {
             return new PendingFile(importVirtualPath, psiFile, resolvedFromRoot);
         }
 
+        if (usesLibrarySearchPath(importPath)) {
+            final VirtualFile resolvedInProject = contentRoot.findFileByRelativePath(importPath);
+            if (resolvedInProject != null && !resolvedInProject.isDirectory()) {
+                final PsiFile psiFile = PsiManager.getInstance(project).findFile(resolvedInProject);
+                return new PendingFile(importVirtualPath, psiFile, resolvedInProject);
+            }
+            final VirtualFile resolvedFromLibrary = resolveOnLibraryRoots(libraryRoots, importPath);
+            if (resolvedFromLibrary != null) {
+                final PsiFile psiFile = PsiManager.getInstance(project).findFile(resolvedFromLibrary);
+                return new PendingFile(importVirtualPath, psiFile, resolvedFromLibrary);
+            }
+        }
+
+        if (importerPsiFile != null) {
+            for (final PsiFile target : OpenSCADImportUtil.resolveImportFiles(importerPsiFile, importPath)) {
+                return new PendingFile(importVirtualPath, target, target.getVirtualFile());
+            }
+        }
+
         return null;
+    }
+
+    @NotNull
+    private static List<String> collectLibraryRoots() {
+        final List<String> roots = new ArrayList<>();
+        final List<String> fromOpenSCAD = OpenSCADInfo.getLibraryPaths();
+        if (fromOpenSCAD != null) {
+            roots.addAll(fromOpenSCAD);
+        }
+        for (final Library library : LibraryTablesRegistrar.getInstance().getLibraryTable().getLibraries()) {
+            for (final VirtualFile root : library.getFiles(OrderRootType.CLASSES)) {
+                if (root.isInLocalFileSystem()) {
+                    roots.add(root.getPath());
+                }
+            }
+        }
+        return roots;
+    }
+
+    @Nullable
+    private static VirtualFile resolveOnLibraryRoots(@NotNull final List<String> libraryRoots,
+                                                     @NotNull final String importPath) {
+        for (final String rootPath : libraryRoots) {
+            final VirtualFile root = LocalFileSystem.getInstance().findFileByPath(rootPath);
+            if (root == null) {
+                continue;
+            }
+            final VirtualFile resolved = root.findFileByRelativePath(importPath);
+            if (resolved != null && !resolved.isDirectory()) {
+                return resolved;
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private static VirtualFile psiVirtualFile(@Nullable final PsiFile psiFile) {
+        return psiFile != null ? psiFile.getVirtualFile() : null;
+    }
+
+    @Nullable
+    private static VirtualFile firstNonNull(@Nullable final VirtualFile first, @Nullable final VirtualFile second) {
+        return first != null ? first : second;
+    }
+
+    /**
+     * Import paths resolved via OpenSCAD library directories (e.g. {@code BOSL2/std.scad}, {@code MCAD/util.scad}).
+     */
+    static boolean usesLibrarySearchPath(@NotNull final String importPath) {
+        if (importPath.startsWith("BOSL/") || importPath.startsWith("BOSL2/")) {
+            return true;
+        }
+        if (importPath.startsWith(".") || importPath.contains("..")) {
+            return false;
+        }
+        if (!importPath.contains("/")) {
+            return false;
+        }
+        return Character.isUpperCase(importPath.charAt(0));
     }
 
     @Nullable
@@ -210,6 +293,9 @@ public final class OpenSCADPreviewSourceCollector {
         if (importPath.startsWith("BOSL/")) {
             return "lib/bosl/" + importPath.substring("BOSL/".length());
         }
+        if (importPath.startsWith("BOSL2/")) {
+            return "lib/bosl2/" + importPath.substring("BOSL2/".length());
+        }
         final int slash = importerProjectRelativePath.lastIndexOf('/');
         final String importerDir = slash >= 0 ? importerProjectRelativePath.substring(0, slash) : "";
         return normalizeProjectRelativePath(importerDir + "/" + importPath);
@@ -217,7 +303,7 @@ public final class OpenSCADPreviewSourceCollector {
 
     @NotNull
     static String resolveImportVirtualPath(@NotNull final String importerVirtualPath, @NotNull final String importPath) {
-        if (importPath.startsWith("BOSL/")) {
+        if (usesLibrarySearchPath(importPath)) {
             return normalizeVirtualPath(WORK_ROOT + "/" + importPath);
         }
         final int slash = importerVirtualPath.lastIndexOf('/');
