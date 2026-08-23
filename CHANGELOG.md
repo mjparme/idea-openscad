@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Preview corner axis orientation widget (OpenSCAD-style labeled X/Y/Z triad) that tracks camera rotation
+
 ### Fixed
 
 - Preview font extension check uses `FileUtilRt.getExtension` instead of deprecated `FileUtil.getExtension` (Plugin Verifier scheduled-for-removal warning)

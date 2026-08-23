@@ -830,9 +830,39 @@ function createViewPresets() {
   document.body.appendChild(container);
 }
 
+const AXIS_OVERLAY_SIZE = 128;
+const axisOverlayScene = new THREE.Scene();
+const axisOverlayCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 10);
+axisOverlayCamera.position.set(0, 0, 2);
+const axisOverlayRoot = new THREE.Object3D();
+axisOverlayScene.add(axisOverlayRoot);
+axisOverlayRoot.add(new THREE.AxesHelper(0.85));
+
+const axisOverlayRenderer = new THREE.WebGLRenderer({
+  alpha: true,
+  antialias: true,
+});
+axisOverlayRenderer.setPixelRatio(window.devicePixelRatio);
+axisOverlayRenderer.setSize(AXIS_OVERLAY_SIZE, AXIS_OVERLAY_SIZE, false);
+axisOverlayRenderer.setClearColor(0x000000, 0);
+axisOverlayRenderer.domElement.style.position = "fixed";
+axisOverlayRenderer.domElement.style.right = "8px";
+axisOverlayRenderer.domElement.style.bottom = "8px";
+axisOverlayRenderer.domElement.style.width = AXIS_OVERLAY_SIZE + "px";
+axisOverlayRenderer.domElement.style.height = AXIS_OVERLAY_SIZE + "px";
+axisOverlayRenderer.domElement.style.zIndex = "10";
+axisOverlayRenderer.domElement.style.pointerEvents = "none";
+document.body.appendChild(axisOverlayRenderer.domElement);
+
+function renderAxisOverlay() {
+  axisOverlayRoot.quaternion.copy(camera.quaternion).invert();
+  axisOverlayRenderer.render(axisOverlayScene, axisOverlayCamera);
+}
+
 // Render scene
 function render() {
   renderer.render(scene, camera);
+  renderAxisOverlay();
 }
 
 function animate() {
@@ -1043,13 +1073,14 @@ renderer.domElement.style.inset = "0";
 renderer.domElement.style.width = "100%";
 renderer.domElement.style.height = "100%";
 document.body.appendChild(renderer.domElement);
-updateRendererSize();
 
 // Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.screenSpacePanning = true;
+
+updateRendererSize();
 
 // Material — smooth shading (STL normals recomputed in displayStlGeometry)
 const material = new THREE.MeshStandardMaterial({
