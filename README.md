@@ -5,7 +5,7 @@
 
 [OpenSCAD](https://openscad.org/index.html) language plugin for IntelliJ Platform IDEs (Idea, PyCharm, etc). It provides :
 
-* Preview split panel, based on [OpenSCAD](https://openscad.org/index.html) rendering
+* Preview split panel with in-browser 3D rendering via [openscad-wasm](https://github.com/openscad/openscad-wasm) (no native OpenSCAD install required for preview)
 * Syntax highlighting and semantic highlighting for modules, functions, variables, and parameters
 * Code completion (built-in modules, project symbols, `use` / `include`, and global libraries)
 * Code navigation and rename for modules, functions, and scoped variables (including cross-file `use` / `include`)
@@ -30,11 +30,11 @@ This fork uses plugin ID `com.mjparme.idea-openscad` and is published separately
 
 ### OpenSCAD executable
 
-[OpenSCAD](https://openscad.org/downloads.html) needs to be installed on your machine for the preview editor and the context menu actions.
+Preview rendering uses **openscad-wasm** bundled in the plugin — you do not need a native OpenSCAD install to use the split preview editor.
 
-The plugin will search for an OpenSCAD executable in standard installation paths at startup.
+A native [OpenSCAD](https://openscad.org/downloads.html) executable is only required for **Open in OpenSCAD** and **Export as…** (context menu actions). The plugin searches standard installation paths at startup.
 
-Go in *Settings* -> *Languages & Frameworks* -> *OpenSCAD* to manually set your installation path and activate/deactivate the preview editor.
+Go in *Settings* -> *Languages & Frameworks* -> *OpenSCAD* to set the executable path and activate or deactivate the preview editor.
 
 ![OpenSCAD settings: executable path, preview editor, and module completion options](docs/screenshots/settings-languages-frameworks-openscad.png)
 
@@ -98,11 +98,11 @@ You can add shortcuts in *Settings* -> *Keymap* -> *Plugins* -> *OpenSCAD Suppor
 
 ## Preview panel
 
-The plugin split preview editor will allow you to modify your code and easily check its result in the IDE.
+The split preview editor lets you edit `.scad` files and see the result in the IDE without launching native OpenSCAD. Rendering runs **openscad-wasm** (Manifold backend) in a JCEF Web Worker; project `use` / `include` dependencies are bundled into a virtual filesystem for the WASM runtime.
 
 ![Split preview editor with semantic highlighting for modules, functions, variables, and parameters](docs/screenshots/split-preview-semantic-highlighting.png)
 
-The preview is done through an OpenSCAD STL file generation hence some information like colors are lost.
+Preview output is an STL mesh, so some information (such as colors) is lost.
 
 You can manually refresh the preview by clicking on the ![Refresh icon](/src/main/resources/com/javampire/openscad/icons/refresh.svg) button in the preview panel or in the editor context menu.
 Alternatively, you can activate the auto refresh with the button ![Autorefresh icon](/src/main/resources/com/javampire/openscad/icons/autoRefresh.svg) which refresh the preview at every file save.
@@ -115,11 +115,9 @@ If you are using a CVS (i.e. git), best is to ignore this folder.
 
 When editing a `.scad` file, right-click in the editor or on the editor tab and open the **OpenSCAD** submenu:
 
-* **Open in OpenSCAD** — launch OpenSCAD with this file
-* **Export as…** — export via the OpenSCAD command line
-* **Refresh Preview** — regenerate the preview (only when the split preview editor is open)
-
-All three require a configured OpenSCAD executable.
+* **Open in OpenSCAD** — launch OpenSCAD with this file (requires a configured executable)
+* **Export as…** — export via the OpenSCAD command line (requires a configured executable)
+* **Refresh Preview** — re-render the WASM preview (only when the split preview editor is open; no native OpenSCAD required)
 
 ## Issues and requests
 
