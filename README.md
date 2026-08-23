@@ -6,6 +6,7 @@
 [OpenSCAD](https://openscad.org/index.html) language plugin for IntelliJ Platform IDEs (Idea, PyCharm, etc). It provides :
 
 * Preview split panel with in-browser 3D rendering via [openscad-wasm](https://github.com/openscad/openscad-wasm) (no native OpenSCAD install required for preview)
+* Configurable preview scene background (Clear Sky, Cornfield, Dark Gradient) from the preview toolbar
 * Syntax highlighting and semantic highlighting for modules, functions, variables, and parameters
 * Code completion (built-in modules, project symbols, `use` / `include`, and global libraries)
 * Code navigation and rename for modules, functions, and scoped variables (including cross-file `use` / `include`)
@@ -103,6 +104,10 @@ The split preview editor lets you edit `.scad` files and see the result in the I
 ![Split preview editor with semantic highlighting for modules, functions, variables, and parameters](docs/screenshots/split-preview-semantic-highlighting.png)
 
 Preview output is an STL mesh, so some information (such as colors) is lost.
+
+Use the **Background** toolbar dropdown to choose a scene background. **Clear Sky** (default), **Cornfield**, and **Dark Gradient** use colors from the matching OpenSCAD render color schemes.
+
+![Preview toolbar background dropdown with Clear Sky, Cornfield, and Dark Gradient options](docs/screenshots/preview-background-toolbar.png)
 
 You can manually refresh the preview by clicking on the ![Refresh icon](/src/main/resources/com/javampire/openscad/icons/refresh.svg) button in the preview panel or in the editor context menu.
 Alternatively, you can activate the auto refresh with the button ![Autorefresh icon](/src/main/resources/com/javampire/openscad/icons/autoRefresh.svg) which refresh the preview at every file save.
