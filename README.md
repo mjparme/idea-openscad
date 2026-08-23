@@ -101,7 +101,7 @@ You can add shortcuts in *Settings* -> *Keymap* -> *Plugins* -> *OpenSCAD Suppor
 
 The split preview editor lets you edit `.scad` files and see the result in the IDE without launching native OpenSCAD. Rendering runs **openscad-wasm** (Manifold backend) in a JCEF Web Worker; project `use` / `include` dependencies are bundled into a virtual filesystem for the WASM runtime.
 
-![Split preview editor with semantic highlighting for modules, functions, variables, and parameters](docs/screenshots/split-preview-semantic-highlighting.png)
+![Split preview editor with WASM 3D preview showing a bowl model on Clear Sky background](docs/screenshots/split-preview-semantic-highlighting.png)
 
 Preview output is an STL mesh, so some information (such as colors) is lost.
 
