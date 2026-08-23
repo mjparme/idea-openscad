@@ -7,6 +7,7 @@
 ### Added
 
 - In-browser 3D preview via openscad-wasm (Manifold backend) with bundled Three.js viewer; preview works without a native OpenSCAD install
+- Configurable preview scene background (Clear Sky, Cornfield, Dark Gradient) from the preview toolbar dropdown
 
 ### Changed
 

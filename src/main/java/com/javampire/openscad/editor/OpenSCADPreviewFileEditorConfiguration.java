@@ -2,6 +2,7 @@ package com.javampire.openscad.editor;
 
 import com.intellij.ui.JBColor;
 import org.cef.browser.CefBrowser;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 
@@ -10,6 +11,7 @@ public class OpenSCADPreviewFileEditorConfiguration {
     private Boolean autoRefresh = true;
     private Boolean showAxis = true;
     private Boolean showGrid = true;
+    private PreviewBackground previewBackground = PreviewBackground.CLEAR_SKY;
     private Color modelColor = JBColor.YELLOW;
     private String cameraQuaternion;
     private String cameraPosition;
@@ -74,6 +76,27 @@ public class OpenSCADPreviewFileEditorConfiguration {
     public void toggleShowGrid() {
         showGrid = !showGrid;
         applyShowGrid();
+    }
+
+    @NotNull
+    public PreviewBackground getPreviewBackground() {
+        return previewBackground;
+    }
+
+    public void setPreviewBackground(@NotNull final PreviewBackground previewBackground) {
+        this.previewBackground = previewBackground;
+        applyPreviewBackground();
+    }
+
+    public void syncPreviewBackgroundFromViewer(@NotNull final PreviewBackground previewBackground) {
+        this.previewBackground = previewBackground;
+    }
+
+    public void applyPreviewBackground() {
+        final CefBrowser browser = getBrowser();
+        if (browser != null) {
+            browser.executeJavaScript("setPreviewBackground('" + previewBackground.getId() + "')", null, 0);
+        }
     }
 
     public Color getModelColor() {

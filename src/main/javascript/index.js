@@ -81,6 +81,52 @@ function showPreviewOverlay(kind, message) {
   window.cefQuery({ request: prefix + message });
 }
 
+const PREVIEW_BACKGROUNDS = {
+  clearsky: { top: "#87ceeb", bottom: "#c9e9f6" },
+  cornfield: { top: "#ffffe5", bottom: "#ffffe5" },
+  "dark-gradient": { top: "#2d2d2d", bottom: "#1a1a1a" },
+};
+const DEFAULT_PREVIEW_BACKGROUND = "clearsky";
+let backgroundTexture = null;
+
+function syncOpaqueBackgroundSurfaces(topHex) {
+  document.documentElement.style.backgroundColor = topHex;
+  document.body.style.backgroundColor = topHex;
+  renderer.setClearColor(new THREE.Color(topHex), 1);
+}
+
+function applyPreviewBackground(id, syncToJava) {
+  const scheme =
+    PREVIEW_BACKGROUNDS[id] || PREVIEW_BACKGROUNDS[DEFAULT_PREVIEW_BACKGROUND];
+  const resolvedId = PREVIEW_BACKGROUNDS[id]
+    ? id
+    : DEFAULT_PREVIEW_BACKGROUND;
+
+  if (backgroundTexture) {
+    backgroundTexture.dispose();
+    backgroundTexture = null;
+  }
+
+  syncOpaqueBackgroundSurfaces(scheme.top);
+
+  if (scheme.top === scheme.bottom) {
+    scene.background = new THREE.Color(scheme.top);
+  } else {
+    backgroundTexture = makeGradientTexture(scheme.top, scheme.bottom);
+    scene.background = backgroundTexture;
+  }
+
+  sessionStorage.setItem("previewBackground", resolvedId);
+  if (syncToJava !== false) {
+    window.cefQuery({ request: "previewBackground=" + resolvedId });
+  }
+  render();
+}
+
+function setPreviewBackground(id) {
+  applyPreviewBackground(id, true);
+}
+
 function makeGradientTexture(topHex, bottomHex) {
   const canvas = document.createElement("canvas");
   canvas.width = 2;
@@ -92,6 +138,7 @@ function makeGradientTexture(topHex, bottomHex) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 2, 256);
   const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.magFilter = THREE.LinearFilter;
   return texture;
 }
@@ -217,6 +264,7 @@ function saveConfiguration() {
     "showGrid",
     (typeof scene.getObjectByName(NAME_GRID) === "object").toString(),
   );
+  sessionStorage.setItem("previewBackground", sessionStorage.getItem("previewBackground") || DEFAULT_PREVIEW_BACKGROUND);
   sessionStorage.setItem("position", camera.position.toArray());
   sessionStorage.setItem("quaternion", camera.quaternion.toArray());
 }
@@ -266,6 +314,13 @@ function loadConfiguration() {
     isShowGrid = isShowGrid === "true";
   }
   showGrid(isShowGrid);
+
+  let previewBackground = sessionStorage.getItem("previewBackground");
+  if (previewBackground === null) {
+    previewBackground = DEFAULT_PREVIEW_BACKGROUND;
+    sessionStorage.setItem("previewBackground", previewBackground);
+  }
+  applyPreviewBackground(previewBackground, false);
 
   const savedPosition = sessionStorage.getItem("position");
   const savedQuaternion = sessionStorage.getItem("quaternion");
@@ -454,6 +509,7 @@ function updateRendererSize() {
 window.showAxis = showAxis;
 window.showGrid = showGrid;
 window.setModelColor = setModelColor;
+window.setPreviewBackground = setPreviewBackground;
 window.saveConfiguration = saveConfiguration;
 window.loadConfiguration = loadConfiguration;
 window.resetCamera = frameModel;
@@ -558,9 +614,8 @@ window.renderPreview = function renderPreview(payload) {
   });
 };
 
-// Scene — Blender-style gradient (matches Flexible / CAD viewers)
+// Scene
 const scene = new THREE.Scene();
-scene.background = makeGradientTexture("#2d2d2d", "#1a1a1a");
 
 // Camera — OpenSCAD right-handed Z-up
 const { width: viewportWidth, height: viewportHeight } = getViewportSize();
@@ -594,10 +649,11 @@ const fillLight = new THREE.DirectionalLight(0x8899cc, 0.3);
 fillLight.position.set(-200, 100, -100);
 scene.add(fillLight);
 
-// Renderer — alpha helps JCEF embed the canvas correctly in the IDE panel
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+// Opaque canvas — avoids JCEF/body bleed washing out background colors
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.setClearColor(0x87ceeb, 1);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.domElement.style.display = "block";
@@ -628,5 +684,10 @@ if (typeof ResizeObserver !== "undefined") {
   new ResizeObserver(() => updateRendererSize()).observe(document.body);
 }
 requestAnimationFrame(updateRendererSize);
+
+applyPreviewBackground(
+  sessionStorage.getItem("previewBackground") || DEFAULT_PREVIEW_BACKGROUND,
+  false,
+);
 
 animate();

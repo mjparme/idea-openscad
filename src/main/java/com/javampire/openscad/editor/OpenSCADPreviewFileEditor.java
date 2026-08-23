@@ -35,6 +35,7 @@ import com.intellij.ui.JBColor;
 import com.intellij.ui.jcef.JCEFHtmlPanel;
 import com.intellij.util.Alarm;
 import com.intellij.util.ui.components.BorderLayoutPanel;
+import com.javampire.openscad.action.PreviewBackgroundActionGroup;
 import com.javampire.openscad.action.*;
 import org.cef.browser.CefBrowser;
 import org.cef.browser.CefFrame;
@@ -286,6 +287,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
                         new Separator(),
                         new ToggleGridAction(),
                         new ToggleAxisAction(),
+                        new PreviewBackgroundActionGroup(),
                         new SetModelColorAction(),
                         new Separator(),
                         new OpenAction(),
@@ -482,6 +484,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         private final static String SHOW_AXIS = "showAxis";
         private final static String SHOW_GRID = "showGrid";
         private final static String MODEL_COLOR = "modelColor";
+        private final static String PREVIEW_BACKGROUND = "previewBackground";
         private final static String PREVIEW_WARNING = "previewWarning";
         private final static String PREVIEW_ERROR = "previewError";
 
@@ -494,6 +497,11 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
                 editorConfig.setShowGrid(Boolean.valueOf(parsed[1]));
             } else if (MODEL_COLOR.equals(parsed[0])) {
                 editorConfig.setModelColor(JBColor.decode(parsed[1]));
+            } else if (PREVIEW_BACKGROUND.equals(parsed[0])) {
+                final PreviewBackground background = PreviewBackground.fromId(parsed[1]);
+                if (background != null) {
+                    editorConfig.syncPreviewBackgroundFromViewer(background);
+                }
             } else if (PREVIEW_WARNING.equals(parsed[0])) {
                 LOG.warn("OpenSCAD WASM preview: " + parsed[1]);
             } else if (PREVIEW_ERROR.equals(parsed[0])) {
