@@ -10,7 +10,7 @@ const GRID_COLOR = 0x909090;
 const MODEL_COLOR = 0xfef353;
 const PREVIEW_PREFIX = "$preview=true;\n";
 /** Bumped when viewer coords change — clears stale camera session keys. */
-const VIEWER_CONFIG_VERSION = "z-up-v1";
+const VIEWER_CONFIG_VERSION = "z-up-v2";
 
 if (typeof window.cefQuery !== "function") {
   window.cefQuery = console.log;
@@ -531,7 +531,6 @@ function displayStlGeometry(geometry) {
   mesh.name = NAME_MODEL;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  geometry.center();
   scene.add(mesh);
   updateRendererSize();
   loadConfiguration();

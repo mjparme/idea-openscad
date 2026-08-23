@@ -19,6 +19,7 @@
 ### Fixed
 
 - WASM preview bundling for BOSL2 projects (e.g. transitive `constants.scad` via `std.scad`, relative `lib/bosl2/` paths)
+- Preview no longer recenters STL geometry at the origin; models keep OpenSCAD world coordinates so z = 0 aligns with the grid
 - Deprecated and scheduled-for-removal IntelliJ Platform API usages migrated to clear Plugin Verifier warnings
 - Editor context menu: OpenSCAD submenu visible again in editor popup
 - Open in OpenSCAD: launch detached so the background task completes immediately instead of waiting for the GUI to exit
