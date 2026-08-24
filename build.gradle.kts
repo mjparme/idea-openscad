@@ -58,14 +58,24 @@ tasks.register<Copy>("syncOfficialOpenScadWasm") {
     }
 }
 
+tasks.register<Exec>("npmInstall") {
+    group = "build"
+    description = "Install Node.js dependencies for webpack preview bundling (from package-lock.json)"
+    notCompatibleWithConfigurationCache("npm ci writes node_modules")
+    workingDir(layout.projectDirectory)
+    commandLine("npm", "ci", "--no-audit", "--no-fund")
+    inputs.files("package.json", "package-lock.json", "src/main/javascript/package.json")
+    outputs.dir("node_modules")
+}
+
 tasks.register<Exec>("webpack") {
     group = "build"
     description = "Bundle preview web assets (Three.js + optional WASM) into generated-resources/html"
-    dependsOn("syncOfficialOpenScadWasm")
+    dependsOn("npmInstall", "syncOfficialOpenScadWasm")
     workingDir(layout.projectDirectory)
     commandLine("npx", "webpack")
     inputs.dir("src/main/javascript")
-    inputs.files("webpack.config.js", "package.json", "src/main/javascript/package.json")
+    inputs.files("webpack.config.js", "package.json", "package-lock.json", "src/main/javascript/package.json")
     outputs.dir("src/main/generated-resources/html")
 }
 
