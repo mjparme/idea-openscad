@@ -34,6 +34,7 @@ import com.intellij.psi.PsiManager;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.jcef.JCEFHtmlPanel;
 import com.intellij.util.Alarm;
+import com.intellij.util.concurrency.AppExecutorUtil;
 import com.intellij.util.ui.components.BorderLayoutPanel;
 import com.javampire.openscad.action.PreviewBackgroundActionGroup;
 import com.javampire.openscad.action.*;
@@ -236,25 +237,23 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         }
         final CefBrowser browser = htmlPanel.getCefBrowser();
         final ModalityState modality = ModalityState.stateForComponent(getComponent());
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            final OpenSCADPreviewSourceCollector.PreviewSources sources = ReadAction.compute(
-                    () -> {
-                        commitDocumentIfOpen();
-                        return OpenSCADPreviewSourceCollector.collect(project, scadFile);
+        ReadAction.nonBlocking(() -> {
+                    commitDocumentIfOpen();
+                    return OpenSCADPreviewSourceCollector.collect(project, scadFile);
+                })
+                .expireWhen(() -> project.isDisposed() || htmlPanel == null)
+                .finishOnUiThread(modality, sources -> {
+                    if (htmlPanel == null) {
+                        return;
                     }
-            );
-            ApplicationManager.getApplication().invokeLater(() -> {
-                if (htmlPanel == null) {
-                    return;
-                }
-                if (sources == null) {
-                    showPreviewError("Could not read OpenSCAD sources for preview.");
-                    LOG.warn("Failed to collect preview sources for " + scadFile.getPath());
-                    return;
-                }
-                OpenSCADPreviewWasmBridge.render(browser, sources);
-            }, modality);
-        });
+                    if (sources == null) {
+                        showPreviewError("Could not read OpenSCAD sources for preview.");
+                        LOG.warn("Failed to collect preview sources for " + scadFile.getPath());
+                        return;
+                    }
+                    OpenSCADPreviewWasmBridge.render(browser, sources);
+                })
+                .submit(AppExecutorUtil.getAppExecutorService());
     }
 
     private void commitDocumentIfOpen() {
