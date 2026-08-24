@@ -18,67 +18,429 @@ if (typeof window.cefQuery !== "function") {
 
 window.cefQuery({ request: "Reloading from scratch" });
 
-function ensurePreviewOverlay() {
-  let overlay = document.getElementById("previewOverlay");
-  if (overlay) {
-    return overlay;
+let previewConsoleExpanded =
+  sessionStorage.getItem("previewConsoleExpanded") === "true";
+let previewConsoleLineCount = 0;
+/** @type {"error" | "warning" | null} */
+let previewConsoleState = null;
+
+function ensurePreviewUi() {
+  let status = document.getElementById("previewStatus");
+  let consoleRoot = document.getElementById("previewConsole");
+  if (status && consoleRoot) {
+    return { status, consoleRoot };
   }
 
   const style = document.createElement("style");
   style.textContent = `
-    #previewOverlay {
-      position: fixed;
-      left: 12px;
-      right: 12px;
-      bottom: 12px;
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 10px 12px;
-      border-radius: 6px;
-      font: 12px/1.45 -apple-system, system-ui, sans-serif;
-      color: #f5f5f5;
-      background: rgba(30, 30, 30, 0.94);
-      border: 1px solid #555;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-      z-index: 20;
-      white-space: pre-wrap;
-      pointer-events: none;
-    }
-    #previewOverlay.error {
-      border-color: #c75050;
-      background: rgba(48, 22, 22, 0.95);
-    }
-    #previewOverlay.warning {
-      border-color: #c9a227;
-      background: rgba(42, 36, 18, 0.95);
-    }
-    #previewOverlay.hidden {
-      display: none;
-    }
+  #previewStatus {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 14px 18px;
+    border-radius: 8px;
+    font: 13px/1.4 -apple-system, system-ui, sans-serif;
+    color: #f0f0f0;
+    background: rgba(28, 28, 28, 0.92);
+    border: 1px solid #555;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+    z-index: 25;
+    pointer-events: none;
+    white-space: pre-wrap;
+  }
+  #previewStatus.hidden {
+    display: none;
+  }
+  #previewStatus .previewSpinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #87ceeb;
+    border-radius: 50%;
+    animation: previewSpin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes previewSpin {
+    to { transform: rotate(360deg); }
+  }
+  #previewConsole {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #d4d4d4;
+    background: rgba(24, 24, 24, 0.97);
+    border-top: 1px solid #444;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
+    pointer-events: auto;
+  }
+  #previewConsole.preview-console-error {
+    border-top-color: #a04040;
+  }
+  #previewConsole.preview-console-warning {
+    border-top-color: #a08030;
+  }
+  #previewConsole.collapsed #previewConsoleBody {
+    display: none;
+  }
+  #previewConsoleHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: rgba(36, 36, 36, 0.98);
+    border-bottom: 1px solid #3a3a3a;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    font: 11px/1.4 -apple-system, system-ui, sans-serif;
+    color: #bbb;
+  }
+  #previewConsole.preview-console-error #previewConsoleHeader {
+    border-left-color: #c75050;
+    background: rgba(48, 28, 28, 0.98);
+  }
+  #previewConsole.preview-console-warning #previewConsoleHeader {
+    border-left-color: #c9a227;
+    background: rgba(44, 38, 22, 0.98);
+  }
+  #previewConsoleHeader:hover {
+    color: #e0e0e0;
+    background: rgba(44, 44, 44, 0.98);
+  }
+  #previewConsoleTitle {
+    font-weight: 600;
+    color: #ddd;
+  }
+  .previewConsoleBadge {
+    display: none;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    line-height: 1.3;
+  }
+  #previewConsole.preview-console-error #previewConsoleBadgeError {
+    display: inline;
+    color: #f0a0a0;
+    background: rgba(120, 40, 40, 0.85);
+  }
+  #previewConsole.preview-console-warning #previewConsoleBadgeWarning {
+    display: inline;
+    color: #e8d080;
+    background: rgba(100, 80, 20, 0.85);
+  }
+  #previewConsoleCount {
+    color: #888;
+    font-size: 10px;
+  }
+  #previewConsoleToggle {
+    margin-left: auto;
+    color: #888;
+    font-size: 10px;
+  }
+  #previewConsoleBody {
+    max-height: 28vh;
+    overflow-y: auto;
+    padding: 6px 10px 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: text;
+    cursor: text;
+  }
+  #previewConsoleBody:empty::before {
+    content: "OpenSCAD output will appear here during preview.";
+    color: #666;
+    font-style: italic;
+  }
+  .previewLogLine {
+    margin: 0 0 2px;
+  }
+  .previewLogLine.stderr {
+    color: #f0a0a0;
+  }
+  .previewLogLine.stdout {
+    color: #c8d8c8;
+  }
+  #previewConsoleContextMenu {
+    position: fixed;
+    z-index: 40;
+    display: none;
+    min-width: 120px;
+    padding: 4px 0;
+    border-radius: 4px;
+    font: 12px/1.4 -apple-system, system-ui, sans-serif;
+    color: #e0e0e0;
+    background: rgba(40, 40, 40, 0.98);
+    border: 1px solid #555;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  #previewConsoleContextMenu.visible {
+    display: block;
+  }
+  #previewConsoleContextMenu button {
+    display: block;
+    width: 100%;
+    padding: 5px 14px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+  }
+  #previewConsoleContextMenu button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  #previewConsoleContextMenu button:disabled {
+    color: #666;
+    cursor: default;
+  }
   `;
   document.head.appendChild(style);
 
-  overlay = document.createElement("div");
-  overlay.id = "previewOverlay";
-  overlay.className = "hidden";
-  document.body.appendChild(overlay);
-  return overlay;
+  status = document.createElement("div");
+  status.id = "previewStatus";
+  status.className = "hidden";
+  status.innerHTML =
+    '<div class="previewSpinner" aria-hidden="true"></div><span class="previewStatusText"></span>';
+  document.body.appendChild(status);
+
+  consoleRoot = document.createElement("div");
+  consoleRoot.id = "previewConsole";
+  consoleRoot.className = previewConsoleExpanded ? "" : "collapsed";
+  consoleRoot.innerHTML =
+    '<div id="previewConsoleHeader">'
+    + '<span id="previewConsoleTitle">OpenSCAD output</span>'
+    + '<span id="previewConsoleBadgeError" class="previewConsoleBadge error">Error</span>'
+    + '<span id="previewConsoleBadgeWarning" class="previewConsoleBadge warning">Warning</span>'
+    + '<span id="previewConsoleCount"></span>'
+    + '<span id="previewConsoleToggle"></span>'
+    + "</div>"
+    + '<div id="previewConsoleBody"></div>';
+  document.body.appendChild(consoleRoot);
+
+  const header = consoleRoot.querySelector("#previewConsoleHeader");
+  header.addEventListener("click", () => {
+    setPreviewConsoleExpanded(!previewConsoleExpanded);
+  });
+
+  const body = consoleRoot.querySelector("#previewConsoleBody");
+  setupPreviewConsoleContextMenu(body);
+
+  updatePreviewConsoleChrome();
+
+  return { status, consoleRoot };
 }
 
-function hidePreviewOverlay() {
-  const overlay = document.getElementById("previewOverlay");
-  if (overlay) {
-    overlay.className = "hidden";
-    overlay.textContent = "";
+let previewConsoleContextMenu = null;
+
+function hidePreviewConsoleContextMenu() {
+  if (previewConsoleContextMenu) {
+    previewConsoleContextMenu.classList.remove("visible");
   }
 }
 
-function showPreviewOverlay(kind, message) {
-  const overlay = ensurePreviewOverlay();
-  overlay.className = kind;
-  overlay.textContent = message;
+function getPreviewConsolePlainText(body) {
+  return Array.from(body.querySelectorAll(".previewLogLine"))
+    .map((line) => line.textContent)
+    .join("\n");
+}
+
+function copyTextToClipboard(text) {
+  if (!text) {
+    return false;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {
+      copyTextToClipboardFallback(text);
+    });
+    return true;
+  }
+  return copyTextToClipboardFallback(text);
+}
+
+function copyTextToClipboardFallback(text) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+  document.body.removeChild(textarea);
+  return copied;
+}
+
+function setupPreviewConsoleContextMenu(body) {
+  if (!previewConsoleContextMenu) {
+    previewConsoleContextMenu = document.createElement("div");
+    previewConsoleContextMenu.id = "previewConsoleContextMenu";
+    previewConsoleContextMenu.innerHTML =
+      '<button type="button" data-action="copy">Copy</button>'
+      + '<button type="button" data-action="select-all">Select All</button>';
+    document.body.appendChild(previewConsoleContextMenu);
+
+    previewConsoleContextMenu.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    previewConsoleContextMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button || button.disabled) {
+        return;
+      }
+      const consoleBody = document.getElementById("previewConsoleBody");
+      if (!consoleBody) {
+        return;
+      }
+      if (button.dataset.action === "copy") {
+        const selected = window.getSelection().toString();
+        const text = selected || getPreviewConsolePlainText(consoleBody);
+        copyTextToClipboard(text);
+      } else if (button.dataset.action === "select-all") {
+        const range = document.createRange();
+        range.selectNodeContents(consoleBody);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      hidePreviewConsoleContextMenu();
+    });
+
+    document.addEventListener("click", hidePreviewConsoleContextMenu);
+    document.addEventListener("contextmenu", (event) => {
+      if (
+        previewConsoleContextMenu
+        && !previewConsoleContextMenu.contains(event.target)
+        && !body.contains(event.target)
+      ) {
+        hidePreviewConsoleContextMenu();
+      }
+    });
+    window.addEventListener("blur", hidePreviewConsoleContextMenu);
+  }
+
+  body.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    setPreviewConsoleExpanded(true);
+    const selected = window.getSelection().toString();
+    const hasContent = body.querySelector(".previewLogLine") != null;
+    const copyButton = previewConsoleContextMenu.querySelector('[data-action="copy"]');
+    const selectAllButton = previewConsoleContextMenu.querySelector('[data-action="select-all"]');
+    copyButton.disabled = !hasContent && !selected;
+    selectAllButton.disabled = !hasContent;
+
+    previewConsoleContextMenu.style.left = event.clientX + "px";
+    previewConsoleContextMenu.style.top = event.clientY + "px";
+    previewConsoleContextMenu.classList.add("visible");
+
+    const rect = previewConsoleContextMenu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      previewConsoleContextMenu.style.left = Math.max(0, window.innerWidth - rect.width - 4) + "px";
+    }
+    if (rect.bottom > window.innerHeight) {
+      previewConsoleContextMenu.style.top = Math.max(0, window.innerHeight - rect.height - 4) + "px";
+    }
+  });
+}
+
+function setPreviewConsoleState(state) {
+  previewConsoleState = state;
+  const consoleRoot = document.getElementById("previewConsole");
+  if (!consoleRoot) {
+    return;
+  }
+  consoleRoot.classList.remove("preview-console-error", "preview-console-warning");
+  if (state === "error") {
+    consoleRoot.classList.add("preview-console-error");
+  } else if (state === "warning") {
+    consoleRoot.classList.add("preview-console-warning");
+  }
+}
+
+function updatePreviewConsoleChrome() {
+  const ui = ensurePreviewUi();
+  const countLabel = ui.consoleRoot.querySelector("#previewConsoleCount");
+  const toggleLabel = ui.consoleRoot.querySelector("#previewConsoleToggle");
+  countLabel.textContent =
+    previewConsoleLineCount > 0 ? `(${previewConsoleLineCount})` : "";
+  toggleLabel.textContent = previewConsoleExpanded ? "Hide" : "Show";
+  ui.consoleRoot.classList.toggle("collapsed", !previewConsoleExpanded);
+  setPreviewConsoleState(previewConsoleState);
+}
+
+function setPreviewConsoleExpanded(expanded) {
+  previewConsoleExpanded = expanded;
+  sessionStorage.setItem("previewConsoleExpanded", String(expanded));
+  updatePreviewConsoleChrome();
+}
+
+function setPreviewStatus(message) {
+  const { status } = ensurePreviewUi();
+  status.querySelector(".previewStatusText").textContent = message;
+  status.classList.remove("hidden");
+  window.cefQuery({ request: "previewStatus=" + message });
+}
+
+function clearPreviewStatus() {
+  const status = document.getElementById("previewStatus");
+  if (status) {
+    status.classList.add("hidden");
+    status.querySelector(".previewStatusText").textContent = "";
+  }
+}
+
+function reportPreviewIssue(kind, message) {
   const prefix = kind === "error" ? "previewError=" : "previewWarning=";
   window.cefQuery({ request: prefix + message });
+  if (kind === "error" || previewConsoleState !== "error") {
+    setPreviewConsoleState(kind);
+  }
+  setPreviewConsoleExpanded(true);
+}
+
+function clearPreviewConsole() {
+  previewConsoleLineCount = 0;
+  previewConsoleState = null;
+  const body = document.getElementById("previewConsoleBody");
+  if (body) {
+    body.textContent = "";
+  }
+  updatePreviewConsoleChrome();
+}
+
+function appendPreviewLog(text, stream = "stdout") {
+  const trimmed = String(text).replace(/\r?\n$/, "");
+  if (!trimmed) {
+    return;
+  }
+  const { consoleRoot } = ensurePreviewUi();
+  const body = consoleRoot.querySelector("#previewConsoleBody");
+  const line = document.createElement("div");
+  line.className = "previewLogLine " + stream;
+  line.textContent = trimmed;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+  previewConsoleLineCount += 1;
+  updatePreviewConsoleChrome();
+  const encoded = encodeURIComponent(trimmed);
+  window.cefQuery({
+    request: "previewLog=" + stream + ":" + encoded,
+  });
 }
 
 const PREVIEW_BACKGROUNDS = {
@@ -86,7 +448,7 @@ const PREVIEW_BACKGROUNDS = {
   cornfield: { top: "#ffffe5", bottom: "#ffffe5" },
   "dark-gradient": { top: "#2d2d2d", bottom: "#1a1a1a" },
 };
-const DEFAULT_PREVIEW_BACKGROUND = "clearsky";
+const DEFAULT_PREVIEW_BACKGROUND = "dark-gradient";
 let backgroundTexture = null;
 
 function syncOpaqueBackgroundSurfaces(topHex) {
@@ -539,12 +901,14 @@ function displayStlGeometry(geometry) {
 const loader = new STLLoader();
 let previewWorker = null;
 let previewGeneration = 0;
+let previewWasmReady = false;
 
 function resetPreviewWorker() {
   if (previewWorker) {
     previewWorker.terminate();
     previewWorker = null;
   }
+  previewWasmReady = false;
 }
 
 function getPreviewWorker() {
@@ -554,19 +918,24 @@ function getPreviewWorker() {
       { type: "module" },
     );
     previewWorker.onmessage = (event) => {
-      const { type, generation, message, stl, warnings } = event.data;
+      const { type, generation, message, stl, warnings, stream } = event.data;
+      if (type === "wasmReady") {
+        previewWasmReady = true;
+        return;
+      }
       if (type === "status") {
-        hidePreviewOverlay();
-        window.cefQuery({ request: message });
+        setPreviewStatus(message);
         return;
       }
       if (type === "log") {
-        window.cefQuery({ request: message });
+        appendPreviewLog(message, stream || "stdout");
         return;
       }
       if (type === "error") {
         console.error(message);
-        showPreviewOverlay("error", message);
+        clearPreviewStatus();
+        reportPreviewIssue("error", message);
+        appendPreviewLog(message, "stderr");
         resetPreviewWorker();
         return;
       }
@@ -574,19 +943,26 @@ function getPreviewWorker() {
         if (generation !== previewGeneration) {
           return;
         }
+        setPreviewStatus("Loading model into viewer...");
         const geometry = loader.parse(stl);
         displayStlGeometry(geometry);
+        clearPreviewStatus();
         if (warnings && warnings.length) {
-          showPreviewOverlay("warning", warnings.join("\n\n"));
-        } else {
-          hidePreviewOverlay();
+          reportPreviewIssue("warning", warnings.join("\n\n"));
+          for (const warning of warnings) {
+            appendPreviewLog(warning, "stderr");
+          }
         }
         window.cefQuery({ request: "WASM preview rendered" });
       }
     };
     previewWorker.onerror = (error) => {
       console.error(error);
-      window.cefQuery({ request: "WASM worker error: " + error.message });
+      clearPreviewStatus();
+      const errorMessage = "WASM worker error: " + error.message;
+      reportPreviewIssue("error", errorMessage);
+      appendPreviewLog(errorMessage, "stderr");
+      window.cefQuery({ request: errorMessage });
       resetPreviewWorker();
     };
   }
@@ -603,7 +979,10 @@ window.renderPreview = function renderPreview(payload) {
   previewGeneration += 1;
   const generation = previewGeneration;
 
-  hidePreviewOverlay();
+  clearPreviewConsole();
+  setPreviewStatus(
+    previewWasmReady ? "Refreshing preview..." : "Initializing preview...",
+  );
   window.cefQuery({ request: "Rendering preview with WebAssembly" });
   getPreviewWorker().postMessage({
     type: "render",
@@ -652,7 +1031,7 @@ scene.add(fillLight);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.setClearColor(0x87ceeb, 1);
+renderer.setClearColor(0x2d2d2d, 1);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.domElement.style.display = "block";

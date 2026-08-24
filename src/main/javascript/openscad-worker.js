@@ -62,7 +62,7 @@ async function getOpenSCADInstance(print, printErr) {
   if (openscadInstance) {
     return openscadInstance;
   }
-  self.postMessage({ type: "status", message: "Loading OpenSCAD WASM..." });
+  self.postMessage({ type: "status", message: "Initializing OpenSCAD WASM..." });
   const vendorDir = "vendor/openscad";
   const moduleFile = "openscad.js";
   const moduleUrl = new URL(`${vendorDir}/${moduleFile}`, self.location.href);
@@ -75,6 +75,7 @@ async function getOpenSCADInstance(print, printErr) {
     print,
     printErr,
   });
+  self.postMessage({ type: "wasmReady" });
   return openscadInstance;
 }
 
@@ -89,16 +90,32 @@ async function renderNow(request) {
   /** @type {string[]} */
   const renderLogs = [];
 
-  const appendLog = (text) => {
+  const appendLog = (text, stream = "stdout") => {
     renderLogs.push(text);
-    self.postMessage({ type: "log", message: text });
+    self.postMessage({ type: "log", message: text, stream });
   };
 
   try {
-    const instance = await getOpenSCADInstance(appendLog, appendLog);
+    const instance = await getOpenSCADInstance(
+      (text) => appendLog(text, "stdout"),
+      (text) => appendLog(text, "stderr"),
+    );
+
+    const fileCount = Object.keys(files).length;
+    self.postMessage({
+      type: "status",
+      message:
+        fileCount === 1
+          ? "Mounting project file..."
+          : `Mounting ${fileCount} project files...`,
+    });
     mountFiles(instance, files);
     unlinkIfExists(instance, outputPath);
 
+    self.postMessage({
+      type: "status",
+      message: "Rendering geometry (this may take a while)...",
+    });
     const exitCode = instance.callMain([mainPath, "--backend=manifold", "-o", outputPath]);
 
     if (exitCode !== 0) {

@@ -11,7 +11,7 @@ public class OpenSCADPreviewFileEditorConfiguration {
     private Boolean autoRefresh = true;
     private Boolean showAxis = true;
     private Boolean showGrid = true;
-    private PreviewBackground previewBackground = PreviewBackground.CLEAR_SKY;
+    private PreviewBackground previewBackground = PreviewBackground.DARK_GRADIENT;
     private Color modelColor = JBColor.YELLOW;
     private String cameraQuaternion;
     private String cameraPosition;

@@ -485,6 +485,8 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         private final static String SHOW_GRID = "showGrid";
         private final static String MODEL_COLOR = "modelColor";
         private final static String PREVIEW_BACKGROUND = "previewBackground";
+        private final static String PREVIEW_STATUS = "previewStatus";
+        private final static String PREVIEW_LOG = "previewLog";
         private final static String PREVIEW_WARNING = "previewWarning";
         private final static String PREVIEW_ERROR = "previewError";
 
@@ -502,10 +504,35 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
                 if (background != null) {
                     editorConfig.syncPreviewBackgroundFromViewer(background);
                 }
+            } else if (PREVIEW_STATUS.equals(parsed[0])) {
+                LOG.info("OpenSCAD preview: " + parsed[1]);
+            } else if (PREVIEW_LOG.equals(parsed[0])) {
+                final String payload = parsed[1];
+                final int colon = payload.indexOf(':');
+                if (colon > 0) {
+                    final String stream = payload.substring(0, colon);
+                    final String encoded = payload.substring(colon + 1);
+                    try {
+                        final String line = java.net.URLDecoder.decode(encoded, java.nio.charset.StandardCharsets.UTF_8);
+                        if ("stderr".equals(stream)) {
+                            LOG.warn("OpenSCAD: " + line);
+                        }
+                        else {
+                            LOG.info("OpenSCAD: " + line);
+                        }
+                    }
+                    catch (final IllegalArgumentException e) {
+                        LOG.info("OpenSCAD: " + payload);
+                    }
+                }
+                else {
+                    LOG.info("OpenSCAD: " + payload);
+                }
             } else if (PREVIEW_WARNING.equals(parsed[0])) {
                 LOG.warn("OpenSCAD WASM preview: " + parsed[1]);
             } else if (PREVIEW_ERROR.equals(parsed[0])) {
-                LOG.error("OpenSCAD WASM preview: " + parsed[1]);
+                // Expected render failures (parse errors, non-zero exit) — warn only; LOG.error triggers IDE exception reporter.
+                LOG.warn("OpenSCAD WASM preview: " + parsed[1]);
             } else {
                 LOG.info("Preview: " + request);
                 callback.success("");

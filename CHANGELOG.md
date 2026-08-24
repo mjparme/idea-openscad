@@ -7,9 +7,13 @@
 ### Added
 
 - In-browser 3D preview via openscad-wasm (Manifold backend) with bundled Three.js viewer; preview works without a native OpenSCAD install
-- Configurable preview scene background from the preview toolbar: **Clear Sky** (default), **Cornfield**, and **Dark Gradient**, using colors from the matching OpenSCAD render color schemes
+- Configurable preview scene background from the preview toolbar: **Clear Sky**, **Cornfield**, and **Dark Gradient**, using colors from the matching OpenSCAD render color schemes
+- Preview loading status overlay with stage messages during WASM init and geometry rendering
+- Collapsible **OpenSCAD output** console in the preview panel for `echo`, warnings, and errors (stdout/stderr from openscad-wasm)
 
 ### Changed
+
+- Default preview background is **Dark Gradient** (was Clear Sky)
 
 - Preview source collector bundles transitive `use`/`include` dependencies and resolves library-prefix imports (`BOSL2/`, `MCAD/`, etc.) from project roots and OpenSCAD library paths
 - `syncOfficialOpenScadWasm` Gradle task copies artifacts from a sibling `openscad-wasm` build instead of shelling out to a script
