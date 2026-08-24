@@ -8,8 +8,9 @@
 
 - In-browser 3D preview via openscad-wasm (Manifold backend) with bundled Three.js viewer; preview works without a native OpenSCAD install
 - Configurable preview scene background from the preview toolbar: **Clear Sky**, **Cornfield**, and **Dark Gradient**, using colors from the matching OpenSCAD render color schemes
-- Preview loading status overlay with stage messages during WASM init and geometry rendering
+- Preview loading status overlay with stage messages during WASM init and geometry rendering; **Initializing preview…** on first load and **Refreshing preview…** on later updates
 - Collapsible **OpenSCAD output** console in the preview panel for `echo`, warnings, and errors (stdout/stderr from openscad-wasm)
+- Console header **Error** / **Warning** badges and right-click **Copy** / **Select All** on preview output
 
 ### Changed
 
@@ -24,6 +25,7 @@
 
 - WASM preview bundling for BOSL2 projects (e.g. transitive `constants.scad` via `std.scad`, relative `lib/bosl2/` paths)
 - Preview no longer recenters STL geometry at the origin; models keep OpenSCAD world coordinates so z = 0 aligns with the grid
+- Expected preview failures (parse errors, non-zero OpenSCAD exit) no longer trigger the IDE internal error reporter; errors appear in the preview console instead
 - Deprecated and scheduled-for-removal IntelliJ Platform API usages migrated to clear Plugin Verifier warnings
 - Editor context menu: OpenSCAD submenu visible again in editor popup
 - Open in OpenSCAD: launch detached so the background task completes immediately instead of waiting for the GUI to exit
