@@ -2,7 +2,9 @@
 
 # OpenSCAD Intellij plugin ChangeLog
 
-## Unreleased
+## [Unreleased]
+
+## [1.2.0]
 
 ### Added
 
@@ -16,11 +18,8 @@
 ### Changed
 
 - Default preview background is **Dark Gradient** (was Clear Sky)
-
 - Preview source collector bundles transitive `use`/`include` dependencies and resolves library-prefix imports (`BOSL2/`, `MCAD/`, etc.) from project roots and OpenSCAD library paths
 - `syncOfficialOpenScadWasm` Gradle task copies artifacts from a sibling `openscad-wasm` build instead of shelling out to a script
-
-### Removed
 
 ### Fixed
 
@@ -32,7 +31,7 @@
 - Open in OpenSCAD: launch detached so the background task completes immediately instead of waiting for the GUI to exit
 - Parser: module calls that shadow builtin names (e.g. user-defined `floor()` module) parse and resolve correctly
 
-## 1.1.0
+## [1.1.0]
 
 ### Added
 
@@ -48,7 +47,7 @@
 
 - Optional JCEF dependency now uses a `config-file` descriptor for split-preview extensions
 
-## 1.0.0
+## [1.0.0]
 
 Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the unmaintained `com.javampire.idea-openscad` listing on JetBrains Marketplace).
 
@@ -92,7 +91,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 - Stub index crash when a declaration name is null
 - Plugin Verifier failures by removing internal API usages
 
-## 2.4.0
+## [2.4.0]
 
 ### Added
 
@@ -113,7 +112,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 
 - Bump dependencies
 
-## 2.3.3
+## [2.3.3]
 
 ### Added
 
@@ -130,7 +129,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 - Bump dependencies
 - GitHub set-output action migration
 
-## 2.3.2
+## [2.3.2]
 
 ### Added
 
@@ -142,7 +141,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 - Technical refactoring
 - Documentation cleaning
 
-## 2.3.1
+## [2.3.1]
 
 ### Added
 
@@ -159,7 +158,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 
 - [Issue-34](https://github.com/ldenisey/idea-openscad/issues/34) Fix preview temporary folder selection in IDE without compilers (Webstorm, ...)
 
-## 2.3.0
+## [2.3.0]
 
 ### Added
 
@@ -174,7 +173,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 
 - Fixed deprecated calls to Jetbrains API.
 
-## 2.2.0
+## [2.2.0]
 
 ### Added
 
@@ -193,14 +192,14 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
   only (from kadhonn)
 - [Issue-80](https://github.com/ncsaba/idea-openscad/issues/80) & [Issue-89](https://github.com/ncsaba/idea-openscad/issues/89) Identifiers can start with digits
 
-## 2.1.1
+## [2.1.1]
 
 ### Fixed
 
 - [Issue-71](https://github.com/ncsaba/idea-openscad/issues/71) & [Issue-74](https://github.com/ncsaba/idea-openscad/issues/74) Fix color identifier detection
 - [Issue-77](https://github.com/ncsaba/idea-openscad/issues/77) Fix npe when invoking file contextual action menu
 
-## 2.1.0
+## [2.1.0]
 
 ### Changed
 
@@ -211,7 +210,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 - [Issue-59](https://github.com/ncsaba/idea-openscad/issues/59) NullPointerException In Intellij
 - [Issue-62](https://github.com/ncsaba/idea-openscad/issues/62) Doesn't open app correctly if file path includes spaces
 
-## 2.0.1
+## [2.0.1]
 
 ### Changed
 
@@ -221,7 +220,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 
 - Fix [Issue-56](https://github.com/ncsaba/idea-openscad/issues/56)
 
-## 2.0.0
+## [2.0.0]
 
 ### Added
 
@@ -239,7 +238,7 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 
 - Fix deprecated calls
 
-## 1.3.0
+## [1.3.0]
 
 ### Added
 
@@ -255,8 +254,18 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 
 - Fix known grammar parsing issues
 
-## 1.2.0
-
-### Fix
-
-- Fixed change-log from the default text
+[Unreleased]: https://github.com/mjparme/idea-openscad/compare/v1.2.0...HEAD
+[2.4.0]: https://github.com/mjparme/idea-openscad/compare/v2.3.3...v2.4.0
+[2.3.3]: https://github.com/mjparme/idea-openscad/compare/v2.3.2...v2.3.3
+[2.3.2]: https://github.com/mjparme/idea-openscad/compare/v2.3.1...v2.3.2
+[2.3.1]: https://github.com/mjparme/idea-openscad/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/mjparme/idea-openscad/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/mjparme/idea-openscad/compare/v2.1.1...v2.2.0
+[2.1.1]: https://github.com/mjparme/idea-openscad/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/mjparme/idea-openscad/compare/v2.0.1...v2.1.0
+[2.0.1]: https://github.com/mjparme/idea-openscad/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/mjparme/idea-openscad/compare/v1.3.0...v2.0.0
+[1.3.0]: https://github.com/mjparme/idea-openscad/commits/v1.3.0
+[1.2.0]: https://github.com/mjparme/idea-openscad/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/mjparme/idea-openscad/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/mjparme/idea-openscad/compare/v2.4.0...v1.0.0
