@@ -124,6 +124,12 @@ When editing a `.scad` file, right-click in the editor or on the editor tab and 
 * **Export as…**, export via the OpenSCAD command line (requires a configured executable)
 * **Refresh Preview**, re-render the WASM preview (only when the split preview editor is open; no native OpenSCAD required)
 
+# Known issues
+
+## `textmetrics()` / `fontmetrics()` in preview
+
+The experimental [`textmetrics()`](https://github.com/openscad/openscad/wiki/Experimental-Features) and `fontmetrics()` builtins (OpenSCAD 2024.10+) are **not supported** in the WASM preview yet. The bundled openscad-wasm binary includes them, but enabling them requires the `--enable=textmetrics` flag and a font setup for the headless runtime (openscad-wasm has no access to system fonts). Until fonts are bundled and the preview worker enables the feature, models that call these functions will fail in the split preview editor. Native **Open in OpenSCAD** / **Export as…** with a local install are unaffected.
+
 # Issues and requests
 
 Issues and requests are tracked in the [Issues tab](https://github.com/mjparme/idea-openscad/issues).
