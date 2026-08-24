@@ -17,7 +17,9 @@ module.exports = {
         {
           from: "./src/main/javascript/vendor/openscad",
           to: "vendor/openscad",
-          noErrorOnMissing: true,
+          noErrorOnMissing: false,
+          // Mark as already optimized so webpack does not run Terser on Emscripten glue.
+          info: { minimized: true },
         },
       ],
     }),

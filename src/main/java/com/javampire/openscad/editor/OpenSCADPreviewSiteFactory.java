@@ -41,6 +41,7 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
 
     private final static Logger LOG = Logger.getInstance(OpenSCADPreviewSiteFactory.class);
     private final static String HTML = "html";
+    private final static String VENDOR_OPENSCAD_JS = "vendor/openscad/openscad.js";
 
     private final Project project;
     private VirtualFile htmlDir;
@@ -88,18 +89,64 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
                     return null;
                 }
 
-                // Copy html and JS resources
-                final VirtualFile jarHtmlRoot = VfsUtil.findFileByURL(getClass().getResource("/html"));
-                try {
-                    VfsUtil.copyDirectory(getInstance(project), jarHtmlRoot, htmlDir, null);
-                }
-                catch (final IOException ioe) {
-                    LOG.error("Can not create copy resource file for scad file preview.", ioe);
-                    htmlDir = null;
-                }
+                copyHtmlResourcesFromPlugin(htmlDir);
+            }
+            else {
+                ensureVendorAssetsPresent(htmlDir);
             }
         }
+        else {
+            ensureVendorAssetsPresent(htmlDir);
+        }
         return htmlDir;
+    }
+
+    private void copyHtmlResourcesFromPlugin(@NotNull final VirtualFile targetHtmlDir) {
+        final VirtualFile jarHtmlRoot = VfsUtil.findFileByURL(getClass().getResource("/html"));
+        if (jarHtmlRoot == null) {
+            LOG.error("Preview html resources missing from plugin JAR.");
+            return;
+        }
+        try {
+            VfsUtil.copyDirectory(getInstance(project), jarHtmlRoot, targetHtmlDir, null);
+        }
+        catch (final IOException ioe) {
+            LOG.error("Can not create copy resource file for scad file preview.", ioe);
+            htmlDir = null;
+        }
+    }
+
+    private void ensureVendorAssetsPresent(@NotNull final VirtualFile htmlDir) {
+        final VirtualFile vendorJs = htmlDir.findFileByRelativePath(VENDOR_OPENSCAD_JS);
+        if (vendorJs != null && vendorJs.exists()) {
+            return;
+        }
+
+        final VirtualFile jarHtmlRoot = VfsUtil.findFileByURL(getClass().getResource("/html"));
+        if (jarHtmlRoot == null) {
+            LOG.error("Preview html resources missing from plugin JAR.");
+            return;
+        }
+        final VirtualFile jarVendorDir = jarHtmlRoot.findFileByRelativePath("vendor/openscad");
+        if (jarVendorDir == null) {
+            LOG.error("OpenSCAD WASM vendor assets missing from plugin JAR.");
+            return;
+        }
+
+        try {
+            VirtualFile vendorRoot = htmlDir.findChild("vendor");
+            if (vendorRoot == null) {
+                vendorRoot = htmlDir.createChildDirectory(this, "vendor");
+            }
+            VirtualFile vendorDir = vendorRoot.findChild("openscad");
+            if (vendorDir == null) {
+                vendorDir = vendorRoot.createChildDirectory(this, "openscad");
+            }
+            VfsUtil.copyDirectory(getInstance(project), jarVendorDir, vendorDir, null);
+        }
+        catch (final IOException ioe) {
+            LOG.error("Can not copy OpenSCAD WASM vendor assets for scad file preview.", ioe);
+        }
     }
 
     private void createPreviewFile(@NotNull final OpenSCADPreviewSite previewSite) {

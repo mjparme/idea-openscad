@@ -44,17 +44,50 @@ tasks.processResources {
 
 val openscadWasmBuild = layout.projectDirectory.dir("../openscad-wasm/build")
 val openscadWasmVendor = layout.projectDirectory.dir("src/main/javascript/vendor/openscad")
+val openscadWasmVendorZip = layout.projectDirectory.file("third-party/openscad-wasm-vendor.zip")
+val openscadWasmRequiredFiles = listOf("openscad.js", "openscad.wasm.js", "openscad.wasm")
 
 tasks.register<Copy>("syncOfficialOpenScadWasm") {
     group = "build"
     description = "Copy official openscad-wasm build artifacts into the preview vendor folder"
     notCompatibleWithConfigurationCache("Optional sync from sibling openscad-wasm build directory")
+    val siblingWasm = openscadWasmBuild.file("openscad.wasm")
     from(openscadWasmBuild) {
-        include("openscad.js", "openscad.wasm.js", "openscad.wasm")
+        include(openscadWasmRequiredFiles)
     }
     into(openscadWasmVendor)
+    onlyIf { siblingWasm.asFile.isFile }
+}
+
+tasks.register<Copy>("extractBundledOpenScadWasm") {
+    group = "build"
+    description = "Extract bundled openscad-wasm vendor artifacts when no local build is available"
+    notCompatibleWithConfigurationCache("Extracts bundled preview WASM into vendor/")
+    val requiredVendorFiles = openscadWasmRequiredFiles.map { openscadWasmVendor.file(it) }
     onlyIf {
-        project.file("../openscad-wasm/build/openscad.wasm").exists()
+        requiredVendorFiles.any { !it.asFile.isFile } && openscadWasmVendorZip.asFile.isFile
+    }
+    from(zipTree(openscadWasmVendorZip)) {
+        include(openscadWasmRequiredFiles)
+    }
+    into(openscadWasmVendor)
+}
+
+tasks.register("ensureOpenScadWasmVendor") {
+    group = "build"
+    description = "Fail the build if preview WASM vendor artifacts are missing"
+    notCompatibleWithConfigurationCache("Validates preview WASM vendor artifacts")
+    dependsOn("syncOfficialOpenScadWasm", "extractBundledOpenScadWasm")
+    val requiredVendorFiles = openscadWasmRequiredFiles.map { openscadWasmVendor.file(it) }
+    doLast {
+        val missing = requiredVendorFiles.filter { !it.asFile.isFile }.map { it.asFile.name }
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "Missing OpenSCAD WASM vendor files: ${missing.joinToString()}. " +
+                    "Build ../openscad-wasm (gmake all), run scripts/sync-official-openscad-wasm.sh, " +
+                    "or add third-party/openscad-wasm-vendor.zip.",
+            )
+        }
     }
 }
 
@@ -71,7 +104,7 @@ tasks.register<Exec>("npmInstall") {
 tasks.register<Exec>("webpack") {
     group = "build"
     description = "Bundle preview web assets (Three.js + optional WASM) into generated-resources/html"
-    dependsOn("npmInstall", "syncOfficialOpenScadWasm")
+    dependsOn("npmInstall", "ensureOpenScadWasmVendor")
     workingDir(layout.projectDirectory)
     commandLine("npx", "webpack")
     inputs.dir("src/main/javascript")
