@@ -33,7 +33,7 @@ const instance = await OpenSCAD({
   printErr: (text) => console.error(text.trimEnd()),
 });
 instance.FS.writeFile("/input.scad", scad);
-const code = instance.callMain(["/input.scad", "--backend=manifold", "-o", "/output.stl"]);
+const code = instance.callMain(["/input.scad", "--backend=manifold", "--summary", "bounding-box", "-o", "/output.stl"]);
 if (code !== 0) {
   console.error("OpenSCAD exited with code", code);
   Deno.exit(code);

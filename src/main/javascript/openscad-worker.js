@@ -116,7 +116,14 @@ async function renderNow(request) {
       type: "status",
       message: "Rendering geometry (this may take a while)...",
     });
-    const exitCode = instance.callMain([mainPath, "--backend=manifold", "-o", outputPath]);
+    const exitCode = instance.callMain([
+      mainPath,
+      "--backend=manifold",
+      "--summary",
+      "bounding-box",
+      "-o",
+      outputPath,
+    ]);
 
     if (exitCode !== 0) {
       discardOpenSCADInstance();

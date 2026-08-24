@@ -11,6 +11,7 @@
 - Preview loading status overlay with stage messages during WASM init and geometry rendering; **Initializing preview…** on first load and **Refreshing preview…** on later updates
 - Collapsible **OpenSCAD output** console in the preview panel for `echo`, warnings, and errors (stdout/stderr from openscad-wasm)
 - Console header **Error** / **Warning** badges and right-click **Copy** / **Select All** on preview output
+- WASM preview enables OpenSCAD `--summary bounding-box` so render bounding box dimensions appear in the output console
 
 ### Changed
 
