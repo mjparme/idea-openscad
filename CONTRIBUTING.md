@@ -9,6 +9,8 @@ If they are linked to an issue please refer to it.
 
 The plugin ID is `com.mjparme.idea-openscad`. The first publish creates the marketplace listing.
 
+Set the Marketplace **license** to **GNU GPL v2** (or GPL-2.0-or-later) so it matches [LICENSE](LICENSE). The distribution bundles GPL OpenSCAD WASM; see [third-party/openscad-wasm.md](third-party/openscad-wasm.md).
+
 1. Set `pluginVersion` in `gradle.properties` and update `CHANGELOG.md` for the release.
 2. Build and verify locally:
 

@@ -1,0 +1,21 @@
+OpenSCAD Support (idea-openscad) IntelliJ Platform plugin
+
+Copyright (C) 2019-2022 Lucien Denisey and contributors
+Copyright (C) 2022-2026 Michael Parmeley and contributors
+
+This product is distributed under the GNU General Public License version 2
+or later. See the LICENSE file in this repository.
+
+Portions of this repository were originally developed by Lucien Denisey and
+contributors under the Apache License 2.0 (fork:
+https://github.com/ldenisey/idea-openscad). Those portions remain subject to
+the Apache License 2.0 requirements for attribution and notice preservation.
+The full Apache License 2.0 text is in LICENSE-APACHE.
+
+This product bundles OpenSCAD compiled to WebAssembly for the in-IDE preview
+editor. That runtime is licensed under the GNU General Public License version
+2. See third-party/openscad-wasm.md.
+
+Third-party components bundled in the plugin distribution may carry their own
+license terms. JetBrains Platform APIs and bundled IDE modules are used
+according to the IntelliJ Platform SDK and respective JetBrains licenses.

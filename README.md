@@ -26,6 +26,16 @@
 This is a maintained fork of [ldenisey/idea-openscad](https://github.com/ldenisey/idea-openscad) by Lucien Denisey. The original plugin on JetBrains Marketplace (`com.javampire.idea-openscad`) is no longer actively maintained.
 This fork uses plugin ID `com.mjparme.idea-openscad` and is published separately.
 
+# License
+
+This plugin is distributed under the **GNU General Public License version 2 or later** (GPL-2.0-or-later). See [LICENSE](LICENSE).
+
+The fork incorporates code originally developed under the **Apache License 2.0**; see [NOTICE](NOTICE) and [LICENSE-APACHE](LICENSE-APACHE).
+
+The **in-IDE preview** bundles OpenSCAD compiled to WebAssembly (openscad-wasm), which is also **GPL-2.0**. Source pointers and update instructions are in [third-party/openscad-wasm.md](third-party/openscad-wasm.md).
+
+When publishing to JetBrains Marketplace, set the listing license to **GPL** to match this distribution.
+
 # Configuration
 
 ## OpenSCAD executable

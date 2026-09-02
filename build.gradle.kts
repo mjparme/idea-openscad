@@ -40,6 +40,10 @@ sourceSets {
 tasks.processResources {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE  // Options: INCLUDE, EXCLUDE, WARN, FAIL
     dependsOn("webpack")
+    from(rootProject.layout.projectDirectory) {
+        include("LICENSE", "NOTICE", "LICENSE-APACHE")
+        into("META-INF")
+    }
 }
 
 val openscadWasmBuild = layout.projectDirectory.dir("../openscad-wasm/build")

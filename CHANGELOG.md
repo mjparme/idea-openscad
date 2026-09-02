@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Relicense the distributed plugin to **GPL-2.0-or-later** with Apache 2.0 attribution for upstream fork portions (`NOTICE`, `LICENSE-APACHE`) and documented GPL bundled WASM (`third-party/openscad-wasm.md`)
+
 ## [1.2.1]
 
 ### Added
