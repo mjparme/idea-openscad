@@ -989,6 +989,8 @@ window.renderPreview = function renderPreview(payload) {
     generation,
     mainPath: payload.mainPath,
     files,
+    enableTextMetrics: Boolean(payload.enableTextMetrics),
+    loadPreviewFonts: Boolean(payload.loadPreviewFonts),
   });
 };
 

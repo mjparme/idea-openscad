@@ -42,11 +42,20 @@ public final class OpenSCADPreviewSourceCollector {
     private static final Logger LOG = Logger.getInstance(OpenSCADPreviewSourceCollector.class);
     private static final String WORK_ROOT = "/work";
     private static final Pattern IMPORT_PATTERN = Pattern.compile("\\b(?:use|include)\\s*<([^>]+)>");
+    private static final Pattern TEXTMETRICS_PATTERN = Pattern.compile("\\b(?:textmetrics|fontmetrics)\\s*\\(");
+    private static final Pattern PREVIEW_FONTS_PATTERN = Pattern.compile(
+            "\\b(?:textmetrics|fontmetrics)\\s*\\(|\\btext\\s*\\("
+    );
 
     private OpenSCADPreviewSourceCollector() {
     }
 
-    public record PreviewSources(@NotNull String mainPath, @NotNull Map<String, String> files) {
+    public record PreviewSources(
+            @NotNull String mainPath,
+            @NotNull Map<String, String> files,
+            boolean loadPreviewFonts,
+            boolean enableTextMetrics
+    ) {
     }
 
     private record PendingFile(@NotNull String virtualPath, @Nullable PsiFile psiFile, @Nullable VirtualFile virtualFile) {
@@ -117,7 +126,38 @@ public final class OpenSCADPreviewSourceCollector {
             }
         }
 
-        return new PreviewSources(mainPath, files);
+        return new PreviewSources(
+                mainPath,
+                files,
+                requiresPreviewFonts(files),
+                requiresTextMetrics(files)
+        );
+    }
+
+    static boolean requiresPreviewFonts(@NotNull final Map<String, String> files) {
+        for (final String content : files.values()) {
+            if (requiresPreviewFonts(content)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean requiresPreviewFonts(@NotNull final String content) {
+        return PREVIEW_FONTS_PATTERN.matcher(content).find();
+    }
+
+    static boolean requiresTextMetrics(@NotNull final Map<String, String> files) {
+        for (final String content : files.values()) {
+            if (requiresTextMetrics(content)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean requiresTextMetrics(@NotNull final String content) {
+        return TEXTMETRICS_PATTERN.matcher(content).find();
     }
 
     @NotNull

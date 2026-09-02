@@ -4,6 +4,9 @@ let rendering = false;
 /** @type {{ generation: number, mainPath: string, files: Record<string, string> } | null} */
 let pendingRequest = null;
 
+/** @type {boolean} */
+let previewFontsLoaded = false;
+
 function ensureDir(instance, filePath) {
   const parts = filePath.split("/").filter(Boolean);
   let current = "";
@@ -81,11 +84,23 @@ async function getOpenSCADInstance(print, printErr) {
 
 function discardOpenSCADInstance() {
   openscadInstance = null;
+  previewFontsLoaded = false;
+}
+
+async function ensurePreviewFonts(instance) {
+  if (previewFontsLoaded) {
+    return;
+  }
+  self.postMessage({ type: "status", message: "Loading preview fonts..." });
+  const fontsUrl = new URL("vendor/openscad/openscad.fonts.js", self.location.href);
+  const fontsModule = await import(/* webpackIgnore: true */ fontsUrl.href);
+  fontsModule.addFonts(instance);
+  previewFontsLoaded = true;
 }
 
 async function renderNow(request) {
   rendering = true;
-  const { generation, mainPath, files } = request;
+  const { generation, mainPath, files, loadPreviewFonts, enableTextMetrics } = request;
   const outputPath = `/preview-${generation}.stl`;
   /** @type {string[]} */
   const renderLogs = [];
@@ -112,18 +127,25 @@ async function renderNow(request) {
     mountFiles(instance, files);
     unlinkIfExists(instance, outputPath);
 
+    if (loadPreviewFonts) {
+      await ensurePreviewFonts(instance);
+    }
+
     self.postMessage({
       type: "status",
       message: "Rendering geometry (this may take a while)...",
     });
-    const exitCode = instance.callMain([
+    const callMainArgs = [
       mainPath,
       "--backend=manifold",
       "--summary",
       "bounding-box",
-      "-o",
-      outputPath,
-    ]);
+    ];
+    if (enableTextMetrics) {
+      callMainArgs.push("--enable=textmetrics");
+    }
+    callMainArgs.push("-o", outputPath);
+    const exitCode = instance.callMain(callMainArgs);
 
     if (exitCode !== 0) {
       discardOpenSCADInstance();
@@ -148,10 +170,16 @@ async function renderNow(request) {
     );
   } catch (error) {
     discardOpenSCADInstance();
+    let message = error instanceof Error ? error.message : String(error);
+    if (request.loadPreviewFonts && /openscad\.fonts\.js/i.test(message)) {
+      message =
+        "Preview fonts are missing (openscad.fonts.js). "
+        + "Rebuild the plugin with openscad-wasm fonts or use Open in OpenSCAD.";
+    }
     self.postMessage({
       type: "error",
       generation,
-      message: error instanceof Error ? error.message : String(error),
+      message,
     });
   } finally {
     rendering = false;
@@ -164,12 +192,18 @@ async function renderNow(request) {
 }
 
 self.onmessage = (event) => {
-  const { type, generation, mainPath, files } = event.data;
+  const { type, generation, mainPath, files, loadPreviewFonts, enableTextMetrics } = event.data;
   if (type !== "render") {
     return;
   }
 
-  const request = { generation, mainPath, files };
+  const request = {
+    generation,
+    mainPath,
+    files,
+    loadPreviewFonts: Boolean(loadPreviewFonts),
+    enableTextMetrics: Boolean(enableTextMetrics),
+  };
   if (rendering) {
     pendingRequest = request;
     return;

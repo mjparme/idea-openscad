@@ -126,9 +126,11 @@ When editing a `.scad` file, right-click in the editor or on the editor tab and 
 
 # Known issues
 
-## `textmetrics()` / `fontmetrics()` in preview
+## Text and `textmetrics()` in preview
 
-The experimental [`textmetrics()`](https://github.com/openscad/openscad/wiki/Experimental-Features) and `fontmetrics()` builtins (OpenSCAD 2024.10+) are **not supported** in the WASM preview yet. The bundled openscad-wasm binary includes them, but enabling them requires the `--enable=textmetrics` flag and a font setup for the headless runtime (openscad-wasm has no access to system fonts). Until fonts are bundled and the preview worker enables the feature, models that call these functions will fail in the split preview editor. Native **Open in OpenSCAD** / **Export as…** with a local install are unaffected.
+WASM preview has no access to system fonts. When bundled sources use the `text()` module or the experimental [`textmetrics()`](https://github.com/openscad/openscad/wiki/Experimental-Features) / `fontmetrics()` builtins, the preview lazy-loads the openscad-wasm **Liberation** font bundle (~8 MB). Models that only use primitives skip that download.
+
+Preview font support is limited to that bundled Liberation family and OpenSCAD defaults — not arbitrary system typefaces. Models that request other fonts may warn or render differently than in native OpenSCAD. User-configurable preview font directories are planned; until then use **Open in OpenSCAD** for full fontconfig behavior.
 
 # Issues and requests
 

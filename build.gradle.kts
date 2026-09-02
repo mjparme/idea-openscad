@@ -46,6 +46,8 @@ val openscadWasmBuild = layout.projectDirectory.dir("../openscad-wasm/build")
 val openscadWasmVendor = layout.projectDirectory.dir("src/main/javascript/vendor/openscad")
 val openscadWasmVendorZip = layout.projectDirectory.file("third-party/openscad-wasm-vendor.zip")
 val openscadWasmRequiredFiles = listOf("openscad.js", "openscad.wasm.js", "openscad.wasm")
+val openscadWasmFontsFile = "openscad.fonts.js"
+val openscadWasmVendorFiles = openscadWasmRequiredFiles + openscadWasmFontsFile
 
 tasks.register<Copy>("syncOfficialOpenScadWasm") {
     group = "build"
@@ -53,7 +55,7 @@ tasks.register<Copy>("syncOfficialOpenScadWasm") {
     notCompatibleWithConfigurationCache("Optional sync from sibling openscad-wasm build directory")
     val siblingWasm = openscadWasmBuild.file("openscad.wasm")
     from(openscadWasmBuild) {
-        include(openscadWasmRequiredFiles)
+        include(openscadWasmVendorFiles)
     }
     into(openscadWasmVendor)
     onlyIf { siblingWasm.asFile.isFile }
@@ -68,7 +70,7 @@ tasks.register<Copy>("extractBundledOpenScadWasm") {
         requiredVendorFiles.any { !it.asFile.isFile } && openscadWasmVendorZip.asFile.isFile
     }
     from(zipTree(openscadWasmVendorZip)) {
-        include(openscadWasmRequiredFiles)
+        include(openscadWasmVendorFiles)
     }
     into(openscadWasmVendor)
 }

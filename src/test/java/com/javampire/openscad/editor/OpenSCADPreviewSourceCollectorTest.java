@@ -142,6 +142,52 @@ public class OpenSCADPreviewSourceCollectorTest extends BasePlatformTestCase {
         assertEquals("config.scad", paths.get(1));
     }
 
+    public void testRequiresTextMetricsDetectsBuiltinCalls() {
+        assertFalse(OpenSCADPreviewSourceCollector.requiresTextMetrics("cube(1);"));
+        assertFalse(OpenSCADPreviewSourceCollector.requiresTextMetrics(
+                "linear_extrude(height = 1) text(text = \"B\", font = \"Liberation Sans\");"
+        ));
+        assertTrue(OpenSCADPreviewSourceCollector.requiresTextMetrics("size = textmetrics(\"Hi\");"));
+        assertTrue(OpenSCADPreviewSourceCollector.requiresTextMetrics("metrics = fontmetrics(\"Liberation Sans\");"));
+    }
+
+    public void testRequiresPreviewFontsDetectsTextModule() {
+        assertFalse(OpenSCADPreviewSourceCollector.requiresPreviewFonts("cube(1);"));
+        assertTrue(OpenSCADPreviewSourceCollector.requiresPreviewFonts(
+                "linear_extrude(height = 1) text(text = \"B\", font = \"Liberation Sans\");"
+        ));
+        assertTrue(OpenSCADPreviewSourceCollector.requiresPreviewFonts("size = textmetrics(\"Hi\");"));
+    }
+
+    public void testCollectLoadsPreviewFontsForTextModule() {
+        final var main = myFixture.addFileToProject("models/letter.scad", """
+                font = "Liberation Sans";
+                linear_extrude(height = 1) text(text = "B", font = font);
+                """);
+        final var sources = OpenSCADPreviewSourceCollector.collect(
+                myFixture.getProject(),
+                main.getVirtualFile()
+        );
+        assertNotNull(sources);
+        assertTrue(sources.loadPreviewFonts());
+        assertFalse(sources.enableTextMetrics());
+    }
+
+    public void testCollectEnablesTextMetricsWhenIncludedFileUsesBuiltin() {
+        myFixture.addFileToProject("lib/metrics.scad", "function width() = textmetrics(\"A\").size[0];");
+        final var main = myFixture.addFileToProject("models/main.scad", """
+                include <../lib/metrics.scad>
+                cube(width());
+                """);
+        final var sources = OpenSCADPreviewSourceCollector.collect(
+                myFixture.getProject(),
+                main.getVirtualFile()
+        );
+        assertNotNull(sources);
+        assertTrue(sources.loadPreviewFonts());
+        assertTrue(sources.enableTextMetrics());
+    }
+
     public void testGetFileContentUsesDocumentText() {
         final var file = myFixture.addFileToProject("model.scad", "cube(1);");
         final var document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()

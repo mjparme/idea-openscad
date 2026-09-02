@@ -11,6 +11,10 @@ required=(
   "$WASM_BUILD/openscad.wasm"
 )
 
+optional=(
+  "$WASM_BUILD/openscad.fonts.js"
+)
+
 for file in "${required[@]}"; do
   if [[ ! -f "$file" ]]; then
     echo "Missing official OpenSCAD WASM artifact: $file" >&2
@@ -22,4 +26,11 @@ done
 
 mkdir -p "$VENDOR_DIR"
 cp "${required[@]}" "$VENDOR_DIR/"
+for file in "${optional[@]}"; do
+  if [[ -f "$file" ]]; then
+    cp "$file" "$VENDOR_DIR/"
+  else
+    echo "Optional OpenSCAD WASM artifact not found (textmetrics preview fonts): $file" >&2
+  fi
+done
 echo "Synced official OpenSCAD WASM into $VENDOR_DIR"

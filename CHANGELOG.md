@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- WASM preview lazy-loads the openscad-wasm **Liberation** font bundle (~8 MB) when bundled sources use `text()` or call `textmetrics()` / `fontmetrics()`; includes Liberation Sans, Serif, and Mono (regular/bold/italic). Models without text skip the download. Experimental builtins also pass `--enable=textmetrics`.
+
 ### Fixed
 
 - Renaming a `.scad` file from the Project View no longer throws an NPE in the rename handler

@@ -34,7 +34,10 @@ public final class OpenSCADPreviewWasmBridge {
     @NotNull
     private static String toJson(@NotNull final OpenSCADPreviewSourceCollector.PreviewSources sources) {
         final StringBuilder json = new StringBuilder();
-        json.append("{\"mainPath\":").append(quote(sources.mainPath())).append(",\"files\":{");
+        json.append("{\"mainPath\":").append(quote(sources.mainPath()))
+                .append(",\"loadPreviewFonts\":").append(sources.loadPreviewFonts())
+                .append(",\"enableTextMetrics\":").append(sources.enableTextMetrics())
+                .append(",\"files\":{");
         boolean first = true;
         for (final Map.Entry<String, String> entry : sources.files().entrySet()) {
             if (!first) {
