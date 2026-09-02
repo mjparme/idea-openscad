@@ -1,6 +1,7 @@
 package com.javampire.openscad.refactoring;
 
 import com.intellij.codeInsight.TargetElementUtil;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
@@ -11,6 +12,7 @@ import com.intellij.refactoring.rename.inplace.MemberInplaceRenameHandler;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.intellij.testFramework.fixtures.CodeInsightTestUtil;
 import com.javampire.openscad.psi.OpenSCADFunctionDeclaration;
+import com.javampire.openscad.psi.OpenSCADImportPathRefElement;
 import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
 import com.javampire.openscad.psi.OpenSCADModuleObjNameRef;
 import com.javampire.openscad.psi.OpenSCADVariableDeclaration;
@@ -29,6 +31,43 @@ public class OpenSCADRenameTest extends BasePlatformTestCase {
     protected void setUp() throws Exception {
         VfsRootAccess.allowRootAccess(getTestRootDisposable(), Path.of(getTestDataPath()).toAbsolutePath().toString());
         super.setUp();
+    }
+
+    public void testGetRenamableElementReturnsNullForPsiFile() {
+        myFixture.configureByFile("module_rename_before.scad");
+        assertNull(OpenSCADRenameUtil.getRenamableElement(myFixture.getFile()));
+
+        DataContext dataContext = SimpleDataContext.builder()
+                .add(CommonDataKeys.PSI_ELEMENT, myFixture.getFile())
+                .build();
+        assertFalse(new OpenSCADRenameHandler().isAvailableOnDataContext(dataContext));
+    }
+
+    public void testImportPathRefManipulatorUpdatesIncludePath() {
+        myFixture.configureByText("main.scad", "include <file1.scad>;");
+        OpenSCADImportPathRefElement pathRef = PsiTreeUtil.findChildOfType(myFixture.getFile(), OpenSCADImportPathRefElement.class);
+        assertNotNull(pathRef);
+        assertEquals("file1.scad", pathRef.getImportPath());
+
+        OpenSCADImportPathRefManipulator manipulator = new OpenSCADImportPathRefManipulator();
+        final OpenSCADImportPathRefElement[] updated = new OpenSCADImportPathRefElement[1];
+        WriteCommandAction.runWriteCommandAction(getProject(), () -> {
+            updated[0] = manipulator.handleContentChange(
+                    pathRef,
+                    manipulator.getRangeInElement(pathRef),
+                    "file2.scad"
+            );
+        });
+        assertEquals("file2.scad", updated[0].getImportPath());
+        assertEquals("include <file2.scad>;", myFixture.getFile().getText());
+    }
+
+    public void testRenameIncludedFileUpdatesImportPath() throws Exception {
+        final var libFile = myFixture.addFileToProject("file1.scad", loadFile("file_rename_import_lib_before.scad"));
+        myFixture.addFileToProject("main.scad", loadFile("file_rename_import_main_before.scad"));
+        myFixture.configureFromTempProjectFile("main.scad");
+        myFixture.renameElement(libFile, "file2.scad");
+        myFixture.checkResultByFile("file_rename_import_main_after.scad");
     }
 
     public void testRenameModule() {

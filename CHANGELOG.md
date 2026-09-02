@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Renaming a `.scad` file from the Project View no longer throws an NPE in the rename handler
+- Renaming an included `.scad` file updates `use`/`include` import paths in dependent files
+
 ## [1.2.1]
 
 ### Added

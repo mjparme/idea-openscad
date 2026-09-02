@@ -1,9 +1,11 @@
 package com.javampire.openscad.refactoring;
 
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiNameIdentifierOwner;
 import com.intellij.psi.PsiReference;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.psi.tree.IElementType;
 import com.javampire.openscad.parser.OpenSCADParserTokenSets;
 import com.javampire.openscad.psi.*;
 import org.jetbrains.annotations.NotNull;
@@ -15,11 +17,16 @@ public final class OpenSCADRenameUtil {
     }
 
     public static boolean isRenamable(@Nullable PsiElement element) {
+        if (element instanceof PsiFile || element == null) {
+            return false;
+        }
+
         if (!(element instanceof PsiNameIdentifierOwner owner) || owner.getNameIdentifier() == null) {
             return false;
         }
 
-        if (OpenSCADParserTokenSets.NON_RENAMABLE_ELEMENTS.contains(element.getNode().getElementType())) {
+        final IElementType elementType = getElementType(element);
+        if (elementType == null || OpenSCADParserTokenSets.NON_RENAMABLE_ELEMENTS.contains(elementType)) {
             return false;
         }
 
@@ -38,7 +45,7 @@ public final class OpenSCADRenameUtil {
      */
     @Nullable
     public static PsiElement getRenamableElement(@Nullable PsiElement element) {
-        if (element == null) {
+        if (element == null || element instanceof PsiFile) {
             return null;
         }
 
@@ -55,14 +62,20 @@ public final class OpenSCADRenameUtil {
             return element;
         }
 
-        if (element.getNode().getElementType() == OpenSCADTypes.IDENTIFIER) {
+        if (getElementType(element) == OpenSCADTypes.IDENTIFIER) {
             final PsiNameIdentifierOwner owner = PsiTreeUtil.getParentOfType(element, PsiNameIdentifierOwner.class, false);
             if (owner != null && isRenamable(owner)) {
                 return owner;
             }
         }
-        
+
         return null;
+    }
+
+    @Nullable
+    private static IElementType getElementType(@NotNull PsiElement element) {
+        final var node = element.getNode();
+        return node != null ? node.getElementType() : null;
     }
 
     @NotNull

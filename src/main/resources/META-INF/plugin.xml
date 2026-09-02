@@ -70,6 +70,8 @@
         <lang.findUsagesProvider language="OpenSCAD" implementationClass="com.javampire.openscad.refactoring.OpenSCADFindUsagesProvider"/>
         <lang.elementManipulator forClass="com.intellij.psi.PsiNameIdentifierOwner"
                                  implementationClass="com.javampire.openscad.refactoring.OpenSCADNamedElementManipulator"/>
+        <lang.elementManipulator forClass="com.javampire.openscad.psi.OpenSCADImportPathRefElement"
+                                 implementationClass="com.javampire.openscad.refactoring.OpenSCADImportPathRefManipulator"/>
         <defaultLiveTemplates file="liveTemplates/OpenSCAD.xml"/>
         <liveTemplateContext contextId="OPENSCAD"
                              implementation="com.javampire.openscad.templates.OpenSCADTemplateContextType"/>
