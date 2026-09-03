@@ -131,9 +131,9 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         final String moduleName = resolveModuleName(item, context.getProject());
         final List<ModuleParameterInfo> parameters = resolveModuleParameters(item, context.getProject(), moduleName);
         if (parameters.isEmpty()) {
-            insertEmptyModuleCall(context);
+            insertEmptyModuleCall(context, moduleName);
         } else {
-            insertParameterizedModuleCall(context);
+            insertParameterizedModuleCall(context, moduleName);
         }
     };
 
@@ -141,13 +141,14 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         final String moduleName = resolveModuleName(item, context.getProject());
         final List<ModuleParameterInfo> parameters = resolveModuleParameters(item, context.getProject(), moduleName);
         if (parameters.isEmpty()) {
-            insertEmptyModuleCall(context);
+            insertEmptyModuleCall(context, moduleName);
             return;
         }
         insertFilledModuleCall(
             context,
             parameters,
-            BuiltinSkeletons.isPositionalFirstArgumentModule(moduleName));
+            BuiltinSkeletons.isPositionalFirstArgumentModule(moduleName),
+            moduleName);
     }
 
     @NotNull
@@ -683,30 +684,35 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
         return new ModuleParameterInfo(name, defaultValueText);
     }
 
-    private static void insertEmptyModuleCall(@NotNull final InsertionContext context) {
+    private static void insertEmptyModuleCall(@NotNull final InsertionContext context, @NotNull final String moduleName) {
         final Editor editor = context.getEditor();
         final Document document = editor.getDocument();
         final int offset = context.getTailOffset();
         // User may have typed `cube(` before accepting completion; don't insert a second `()`.
         if (offset < document.getTextLength() && document.getText().charAt(offset) == '(') {
             moveCaretAfterModuleCallParentheses(context);
+            maybeInsertModuleCallSemicolon(context, moduleName);
             return;
         }
         document.insertString(offset, "()");
         editor.getCaretModel().moveToOffset(offset + 2);
+        maybeInsertModuleCallSemicolon(context, moduleName);
     }
 
-    private static void insertParameterizedModuleCall(@NotNull final InsertionContext context) {
+    private static void insertParameterizedModuleCall(@NotNull final InsertionContext context,
+        @NotNull final String moduleName) {
         final Editor editor = context.getEditor();
         final Document document = editor.getDocument();
         final int offset = context.getTailOffset();
         // Same as insertEmptyModuleCall: respect a `(` already typed after the module name.
         if (offset < document.getTextLength() && document.getText().charAt(offset) == '(') {
             moveCaretAfterModuleCallParentheses(context);
+            maybeInsertModuleCallSemicolon(context, moduleName);
             return;
         }
         document.insertString(offset, "()");
         editor.getCaretModel().moveToOffset(offset + 2);
+        maybeInsertModuleCallSemicolon(context, moduleName);
     }
 
     private static void moveCaretAfterModuleCallParentheses(@NotNull final InsertionContext context) {
@@ -725,7 +731,8 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
 
     private static void insertFilledModuleCall(@NotNull final InsertionContext context,
         @NotNull final List<ModuleParameterInfo> parameters,
-        final boolean positionalFirstArgument) {
+        final boolean positionalFirstArgument,
+        @NotNull final String moduleName) {
         final Editor editor = context.getEditor();
         final Document document = editor.getDocument();
         final int offset = context.getTailOffset();
@@ -740,11 +747,58 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
                 document.insertString(insertOffset + argumentList.length(), ")");
             }
             editor.getCaretModel().moveToOffset(offset + argumentList.length() + 2);
+            maybeInsertModuleCallSemicolon(context, moduleName);
             return;
         }
 
         document.insertString(offset, "(" + argumentList + ")");
         editor.getCaretModel().moveToOffset(offset + argumentList.length() + 2);
+        maybeInsertModuleCallSemicolon(context, moduleName);
+    }
+
+    /**
+     * Appends {@code ;} when the module call ends the current statement (nothing meaningful follows {@code )}).
+     */
+    private static void maybeInsertModuleCallSemicolon(@NotNull final InsertionContext context,
+        @NotNull final String moduleName) {
+        if (!BuiltinSkeletons.shouldAppendSemicolonOnModuleCompletion(context.getProject(), moduleName)) {
+            return;
+        }
+
+        final Editor editor = context.getEditor();
+        final Document document = editor.getDocument();
+        final int caretOffset = editor.getCaretModel().getOffset();
+        if (caretOffset <= 0 || document.getText().charAt(caretOffset - 1) != ')') {
+            return;
+        }
+
+        int scanOffset = caretOffset;
+        while (scanOffset < document.getTextLength()) {
+            final char ch = document.getText().charAt(scanOffset);
+            if (ch == ' ' || ch == '\t') {
+                scanOffset++;
+                continue;
+            }
+            if (ch == ';') {
+                return;
+            }
+            if (ch == ',' || ch == ']' || ch == ')') {
+                return;
+            }
+            if (ch == '\n' || ch == '\r' || ch == '}') {
+                break;
+            }
+            if (ch == '/' && scanOffset + 1 < document.getTextLength()) {
+                final char next = document.getText().charAt(scanOffset + 1);
+                if (next == '/' || next == '*') {
+                    break;
+                }
+            }
+            return;
+        }
+
+        document.insertString(caretOffset, ";");
+        editor.getCaretModel().moveToOffset(caretOffset + 1);
     }
 
     @NotNull

@@ -27,6 +27,11 @@ public final class BuiltinSkeletons {
     private static final String POSITIONAL_FIRST_ARGUMENT_MARKER = "// POSITIONAL_FIRST_ARGUMENT:";
     private static final Set<String> DEFAULT_POSITIONAL_FIRST_ARGUMENT_MODULES =
         Set.of("cube", "sphere", "rotate", "translate");
+    /** Built-in primitives that typically end a statement with {@code ;}, not child blocks. */
+    private static final Set<String> STATEMENT_ENDING_SHAPE_MODULES = Set.of(
+        "cube", "sphere", "cylinder", "polyhedron",
+        "square", "circle", "polygon", "text", "surface", "import"
+    );
 
     private static Map<String, OpenSCADModuleDeclaration> moduleDeclarations;
     private static Map<String, OpenSCADFunctionDeclaration> functionDeclarations;
@@ -61,6 +66,21 @@ public final class BuiltinSkeletons {
         }
 
         return getPositionalFirstArgumentModules().contains(name);
+    }
+
+    /**
+     * Whether module completion should append {@code ;} when the call ends the current statement.
+     * User-defined modules and built-in shape primitives do; CSG/transform builtins do not.
+     */
+    public static boolean shouldAppendSemicolonOnModuleCompletion(@Nullable final Project project,
+        @NotNull final String moduleName) {
+        if (STATEMENT_ENDING_SHAPE_MODULES.contains(moduleName)) {
+            return true;
+        }
+        if (project == null) {
+            return false;
+        }
+        return findModuleDeclaration(project, moduleName) == null;
     }
 
     @NotNull

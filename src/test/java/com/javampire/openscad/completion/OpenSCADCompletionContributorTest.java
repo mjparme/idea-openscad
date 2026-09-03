@@ -92,11 +92,55 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         selectLookupItem(mainShape);
         myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
         myFixture.checkResult("""
-                mainShape()
+                mainShape();
                 module mainShape(delta = 0) { cube(delta); }
                 """);
-        final int openParenOffset = myFixture.getFile().getText().indexOf('(');
-        assertEquals(openParenOffset + 2, myFixture.getEditor().getCaretModel().getOffset());
+        final int closeParenOffset = myFixture.getFile().getText().indexOf(')');
+        assertEquals(closeParenOffset + 2, myFixture.getEditor().getCaretModel().getOffset());
+    }
+
+    public void testModuleCompletionDoesNotInsertSemicolonForBuiltinOperators() {
+        myFixture.configureByText("test.scad", "<caret>uni");
+        final LookupElement union = findLookupItem("union");
+        selectLookupItem(union);
+        myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
+        myFixture.checkResult("union()");
+
+        myFixture.configureByText("test.scad", "<caret>trans");
+        final LookupElement translate = findLookupItem("translate");
+        selectLookupItem(translate);
+        myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
+        myFixture.checkResult("translate()");
+
+        myFixture.configureByText("test.scad", "<caret>diff");
+        final LookupElement difference = findLookupItem("difference");
+        selectLookupItem(difference);
+        myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
+        myFixture.checkResult("difference()");
+    }
+
+    public void testModuleCompletionDoesNotInsertSemicolonBeforeFollowingModuleCall() {
+        myFixture.configureByText("test.scad", """
+                union() cu<caret> sphere();
+                """);
+        final LookupElement cube = findLookupItem("cube");
+        selectLookupItem(cube);
+        myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
+        myFixture.checkResult("""
+                union() cube() sphere();
+                """);
+    }
+
+    public void testModuleCompletionDoesNotInsertSemicolonInsideArgumentList() {
+        myFixture.configureByText("test.scad", """
+                union(cu<caret>, sphere());
+                """);
+        final LookupElement cube = findLookupItem("cube");
+        selectLookupItem(cube);
+        myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
+        myFixture.checkResult("""
+                union(cube(), sphere());
+                """);
     }
 
     public void testParameterizedModuleCompletionMovesCaretAfterExistingParentheses() {
@@ -133,11 +177,11 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         selectLookupItem(mainShapeWithArgs);
         myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
         myFixture.checkResult("""
-                mainShape(delta = 0, width = 10)
+                mainShape(delta = 0, width = 10);
                 module mainShape(delta = 0, width = 10) { cube(delta); }
                 """);
         final int closeParenOffset = myFixture.getFile().getText().indexOf(')');
-        assertEquals(closeParenOffset + 1, myFixture.getEditor().getCaretModel().getOffset());
+        assertEquals(closeParenOffset + 2, myFixture.getEditor().getCaretModel().getOffset());
     }
 
     public void testWithArgsCompletionItemUsesEmptyPlaceholderForParametersWithoutDefaults() {
@@ -149,11 +193,11 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         selectLookupItem(mainShapeWithArgs);
         myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
         myFixture.checkResult("""
-                mainShape(delta = 0, extra = )
+                mainShape(delta = 0, extra = );
                 module mainShape(delta = 0, extra) { cube(delta); }
                 """);
         final int closeParenOffset = myFixture.getFile().getText().indexOf(')');
-        assertEquals(closeParenOffset + 1, myFixture.getEditor().getCaretModel().getOffset());
+        assertEquals(closeParenOffset + 2, myFixture.getEditor().getCaretModel().getOffset());
     }
 
     public void testWithArgsCompletionItemHiddenWhenSettingEnabled() {
@@ -185,11 +229,11 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
             selectLookupItem(mainShape);
             myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
             myFixture.checkResult("""
-                    mainShape(delta = 0)
+                    mainShape(delta = 0);
                     module mainShape(delta = 0) { cube(delta); }
                     """);
             final int closeParenOffset = myFixture.getFile().getText().indexOf(')');
-            assertEquals(closeParenOffset + 1, myFixture.getEditor().getCaretModel().getOffset());
+            assertEquals(closeParenOffset + 2, myFixture.getEditor().getCaretModel().getOffset());
         }
         finally {
             settings.setFillNamedArgumentsOnModuleCompletion(previous);
@@ -202,9 +246,9 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
         assertNotNull(cubeWithArgs);
         selectLookupItem(cubeWithArgs);
         myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
-        myFixture.checkResult("cube([1, 1, 1], center = false)");
+        myFixture.checkResult("cube([1, 1, 1], center = false);");
         final int closeParenOffset = myFixture.getFile().getText().indexOf(')');
-        assertEquals(closeParenOffset + 1, myFixture.getEditor().getCaretModel().getOffset());
+        assertEquals(closeParenOffset + 2, myFixture.getEditor().getCaretModel().getOffset());
     }
 
     public void testBuiltinCubePrimaryWithSettingUsesPositionalFirstParameter() {
@@ -216,9 +260,9 @@ public class OpenSCADCompletionContributorTest extends BasePlatformTestCase {
             final LookupElement cube = findLookupItem("cube");
             selectLookupItem(cube);
             myFixture.finishLookup(Lookup.REPLACE_SELECT_CHAR);
-            myFixture.checkResult("cube([1, 1, 1], center = false)");
+            myFixture.checkResult("cube([1, 1, 1], center = false);");
             final int closeParenOffset = myFixture.getFile().getText().indexOf(')');
-            assertEquals(closeParenOffset + 1, myFixture.getEditor().getCaretModel().getOffset());
+            assertEquals(closeParenOffset + 2, myFixture.getEditor().getCaretModel().getOffset());
         }
         finally {
             settings.setFillNamedArgumentsOnModuleCompletion(previous);
