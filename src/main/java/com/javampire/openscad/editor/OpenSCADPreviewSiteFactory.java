@@ -41,7 +41,13 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
 
     private final static Logger LOG = Logger.getInstance(OpenSCADPreviewSiteFactory.class);
     private final static String HTML = "html";
-    private final static String VENDOR_OPENSCAD_JS = "vendor/openscad/openscad.js";
+    private final static String VENDOR_OPENSCAD_DIR = "vendor/openscad";
+    private final static String[] VENDOR_OPENSCAD_FILES = {
+            "openscad.js",
+            "openscad.wasm.js",
+            "openscad.wasm",
+            "openscad.fonts.js",
+    };
 
     private final Project project;
     private VirtualFile htmlDir;
@@ -117,8 +123,7 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
     }
 
     private void ensureVendorAssetsPresent(@NotNull final VirtualFile htmlDir) {
-        final VirtualFile vendorJs = htmlDir.findFileByRelativePath(VENDOR_OPENSCAD_JS);
-        if (vendorJs != null && vendorJs.exists()) {
+        if (hasCompleteVendorAssets(htmlDir)) {
             return;
         }
 
@@ -147,6 +152,16 @@ public final class OpenSCADPreviewSiteFactory implements Disposable {
         catch (final IOException ioe) {
             LOG.error("Can not copy OpenSCAD WASM vendor assets for scad file preview.", ioe);
         }
+    }
+
+    private boolean hasCompleteVendorAssets(@NotNull final VirtualFile htmlDir) {
+        for (final String vendorFile : VENDOR_OPENSCAD_FILES) {
+            final VirtualFile file = htmlDir.findFileByRelativePath(VENDOR_OPENSCAD_DIR + "/" + vendorFile);
+            if (file == null || !file.exists()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void createPreviewFile(@NotNull final OpenSCADPreviewSite previewSite) {

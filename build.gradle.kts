@@ -65,9 +65,9 @@ tasks.register<Copy>("extractBundledOpenScadWasm") {
     group = "build"
     description = "Extract bundled openscad-wasm vendor artifacts when no local build is available"
     notCompatibleWithConfigurationCache("Extracts bundled preview WASM into vendor/")
-    val requiredVendorFiles = openscadWasmRequiredFiles.map { openscadWasmVendor.file(it) }
+    val vendorFiles = openscadWasmVendorFiles.map { openscadWasmVendor.file(it) }
     onlyIf {
-        requiredVendorFiles.any { !it.asFile.isFile } && openscadWasmVendorZip.asFile.isFile
+        vendorFiles.any { !it.asFile.isFile } && openscadWasmVendorZip.asFile.isFile
     }
     from(zipTree(openscadWasmVendorZip)) {
         include(openscadWasmVendorFiles)
@@ -80,9 +80,9 @@ tasks.register("ensureOpenScadWasmVendor") {
     description = "Fail the build if preview WASM vendor artifacts are missing"
     notCompatibleWithConfigurationCache("Validates preview WASM vendor artifacts")
     dependsOn("syncOfficialOpenScadWasm", "extractBundledOpenScadWasm")
-    val requiredVendorFiles = openscadWasmRequiredFiles.map { openscadWasmVendor.file(it) }
+    val vendorFiles = openscadWasmVendorFiles.map { openscadWasmVendor.file(it) }
     doLast {
-        val missing = requiredVendorFiles.filter { !it.asFile.isFile }.map { it.asFile.name }
+        val missing = vendorFiles.filter { !it.asFile.isFile }.map { it.asFile.name }
         if (missing.isNotEmpty()) {
             throw GradleException(
                 "Missing OpenSCAD WASM vendor files: ${missing.joinToString()}. " +
