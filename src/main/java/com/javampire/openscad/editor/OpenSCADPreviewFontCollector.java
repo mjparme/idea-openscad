@@ -1,7 +1,7 @@
 package com.javampire.openscad.editor;
 
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -75,7 +75,7 @@ public final class OpenSCADPreviewFontCollector {
     }
 
     static boolean isFontFile(@NotNull final java.nio.file.Path path) {
-        final String extension = FileUtil.getExtension(path.getFileName().toString()).toLowerCase(Locale.ROOT);
+        final String extension = FileUtilRt.getExtension(path.getFileName().toString()).toLowerCase(Locale.ROOT);
         return FONT_EXTENSIONS.contains("." + extension);
     }
 }
