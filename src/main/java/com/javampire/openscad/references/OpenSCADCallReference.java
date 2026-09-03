@@ -116,6 +116,20 @@ public class OpenSCADCallReference extends PsiReferenceBase<OpenSCADResolvableEl
             }
             return new ResolveResult[]{parameterResults.get(parameterResults.size() - 1)};
         }
+        final List<OpenSCADNamedElement> accessibleLoopBindings =
+                OpenSCADPsiImplUtil.getAccessibleLoopBindings(myElement);
+        final List<ResolveResult> loopBindingResults = new ArrayList<>();
+        for (OpenSCADNamedElement declaration : accessibleLoopBindings) {
+            if (referencedName.equals(declaration.getName())) {
+                loopBindingResults.add(new PsiElementResolveResult(declaration));
+            }
+        }
+        if (!loopBindingResults.isEmpty()) {
+            if (loopBindingResults.size() == 1) {
+                return loopBindingResults.toArray(ResolveResult.EMPTY_ARRAY);
+            }
+            return new ResolveResult[]{loopBindingResults.get(loopBindingResults.size() - 1)};
+        }
         final OpenSCADVariableDeclaration includedVariable = OpenSCADImportUtil.findIncludedVariable(myElement, referencedName);
         if (includedVariable != null) {
             return new ResolveResult[]{new PsiElementResolveResult(includedVariable)};

@@ -19,6 +19,7 @@ import com.javampire.openscad.parser.OpenSCADParserTokenSets;
 import com.javampire.openscad.psi.stub.function.OpenSCADFunctionStubElementType;
 import com.javampire.openscad.psi.stub.module.OpenSCADModuleStubElementType;
 import com.javampire.openscad.psi.stub.variable.OpenSCADVariableStubElementType;
+import com.javampire.openscad.psi.OpenSCADTypes;
 import com.javampire.openscad.references.OpenSCADParameterCallReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -245,6 +246,241 @@ public class OpenSCADPsiImplUtil {
         }
 
         return result;
+    }
+
+    /**
+     * Returns loop and let bindings from enclosing {@code for}/{@code let}/{@code assign} scopes.
+     */
+    public static List<OpenSCADFullArgDeclaration> getAccessibleFullArgDeclarations(@NotNull final PsiElement element) {
+        final List<OpenSCADFullArgDeclaration> result = new ArrayList<>();
+        for (final PsiElement parent : getParentsOfType(element, OpenSCADParserTokenSets.WITH_FULL_ARG_DECLARATION_LIST)) {
+            if (parent instanceof OpenSCADForObj forObj) {
+                collectForObjFullArgDeclarations(element, forObj, result);
+            }
+        }
+        collectLetFullArgDeclarations(element, result);
+        return result;
+    }
+
+    /**
+     * Returns list-comprehension {@code for (name = expr)} bindings visible at the given element.
+     */
+    public static List<OpenSCADForBinding> getAccessibleForElementBindings(@NotNull final PsiElement element) {
+        final List<OpenSCADForBinding> result = new ArrayList<>();
+        collectForElementBindingsFromContainers(element, result);
+        return result;
+    }
+
+    private static void collectForElementBindingsFromContainers(@NotNull final PsiElement element,
+        @NotNull final List<OpenSCADForBinding> result) {
+        PsiElement container = element.getParent();
+        while (container != null && !(container instanceof PsiFileBase)) {
+            collectForElementBindingsInContainer(container, element, result);
+            container = container.getParent();
+        }
+    }
+
+    private static void collectForElementBindingsInContainer(@NotNull final PsiElement container,
+        @NotNull final PsiElement element,
+        @NotNull final List<OpenSCADForBinding> result) {
+        final List<OpenSCADForElement> activeForElements = new ArrayList<>();
+        for (PsiElement sibling = container.getFirstChild(); sibling != null; sibling = sibling.getNextSibling()) {
+            if (sibling instanceof OpenSCADForElement forElement) {
+                activeForElements.add(forElement);
+                if (element.equals(sibling) || PsiTreeUtil.isAncestor(sibling, element, false)) {
+                    for (final OpenSCADForElement activeForElement : activeForElements) {
+                        collectForElementBindingsInScope(element, activeForElement, result);
+                    }
+                    return;
+                }
+                continue;
+            }
+            if (element.equals(sibling) || PsiTreeUtil.isAncestor(sibling, element, false)) {
+                for (final OpenSCADForElement activeForElement : activeForElements) {
+                    addAllForElementBindings(activeForElement, result);
+                }
+                return;
+            }
+        }
+    }
+
+    private static void collectForElementBindingsInScope(@NotNull final PsiElement element,
+        @NotNull final OpenSCADForElement forElement,
+        @NotNull final List<OpenSCADForBinding> result) {
+        final OpenSCADForDeclarationList declarationList = forElement.getForDeclarationList();
+        if (declarationList == null) {
+            return;
+        }
+        final OpenSCADForDeclaration declaration = declarationList.getForDeclaration();
+        if (declaration == null) {
+            return;
+        }
+        if (isInsideForDeclaration(element, declaration)) {
+            addPrecedingForBindings(declaration, element, result);
+        } else {
+            addAllForElementBindings(forElement, result);
+        }
+    }
+
+    private static void addAllForElementBindings(@NotNull final OpenSCADForElement forElement,
+        @NotNull final List<OpenSCADForBinding> result) {
+        final OpenSCADForDeclaration declaration = forElement.getForDeclarationList().getForDeclaration();
+        if (declaration != null) {
+            result.addAll(extractForDeclarationBindings(declaration));
+        }
+    }
+
+    /**
+     * Returns all loop and let bindings visible at the given element.
+     */
+    public static List<OpenSCADNamedElement> getAccessibleLoopBindings(@NotNull final PsiElement element) {
+        final List<OpenSCADNamedElement> result = new ArrayList<>(getAccessibleFullArgDeclarations(element));
+        result.addAll(getAccessibleForElementBindings(element));
+        return result;
+    }
+
+    private static boolean isInsideForDeclaration(@NotNull final PsiElement element,
+        @NotNull final OpenSCADForDeclaration declaration) {
+        return PsiTreeUtil.isAncestor(declaration, element, false) && !element.equals(declaration);
+    }
+
+    private static void addPrecedingForBindings(@NotNull final OpenSCADForDeclaration declaration,
+        @NotNull final PsiElement element,
+        @NotNull final List<OpenSCADForBinding> result) {
+        for (final OpenSCADForBinding binding : extractForDeclarationBindings(declaration)) {
+            if (element.equals(binding.getNameIdentifier()) || isInForBindingExpression(element, binding)) {
+                break;
+            }
+            result.add(binding);
+        }
+    }
+
+    private static boolean isInForBindingExpression(@NotNull final PsiElement element,
+        @NotNull final OpenSCADForBinding binding) {
+        final PsiElement expression = getForBindingExpression(binding);
+        return expression != null && PsiTreeUtil.isAncestor(expression, element, false);
+    }
+
+    @Nullable
+    private static PsiElement getForBindingExpression(@NotNull final OpenSCADForBinding binding) {
+        PsiElement cursor = PsiTreeUtil.skipWhitespacesAndCommentsForward(binding.getNameIdentifier().getNextSibling());
+        if (cursor == null || cursor.getNode().getElementType() != OpenSCADTypes.EQUALS) {
+            return null;
+        }
+        return PsiTreeUtil.skipWhitespacesAndCommentsForward(cursor.getNextSibling());
+    }
+
+    private static List<OpenSCADForBinding> extractForDeclarationBindings(@NotNull final OpenSCADForDeclaration declaration) {
+        final OpenSCADForDeclarationCstyle cstyle = declaration.getForDeclarationCstyle();
+        if (cstyle != null) {
+            return extractCstyleLoopBindings(cstyle);
+        }
+        return extractTopLevelEqualsBindings(declaration);
+    }
+
+    private static List<OpenSCADForBinding> extractTopLevelEqualsBindings(@NotNull final PsiElement container) {
+        final List<OpenSCADForBinding> result = new ArrayList<>();
+        for (PsiElement child = container.getFirstChild(); child != null; child = child.getNextSibling()) {
+            if (OpenSCADForBinding.isBindingIdentifier(child)) {
+                result.add(new OpenSCADForBinding(child, container));
+            }
+        }
+        return result;
+    }
+
+    private static List<OpenSCADForBinding> extractCstyleLoopBindings(@NotNull final OpenSCADForDeclarationCstyle cstyle) {
+        final List<OpenSCADForBinding> result = new ArrayList<>();
+        int semicolonsSeen = 0;
+        for (PsiElement child = cstyle.getFirstChild(); child != null; child = child.getNextSibling()) {
+            if (child.getNode().getElementType() == OpenSCADTypes.SEMICOLON) {
+                semicolonsSeen++;
+                continue;
+            }
+            if (semicolonsSeen == 0 || semicolonsSeen == 2) {
+                if (OpenSCADForBinding.isBindingIdentifier(child)) {
+                    result.add(new OpenSCADForBinding(child, cstyle));
+                }
+            }
+        }
+        return result;
+    }
+
+    private static void collectForObjFullArgDeclarations(@NotNull final PsiElement element,
+        @NotNull final OpenSCADForObj forObj,
+        @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        final OpenSCADFullArgDeclarationList argList = forObj.getFullArgDeclarationList();
+        if (argList == null) {
+            return;
+        }
+        if (isInsideFullArgDeclarationList(element, argList)) {
+            addPrecedingFullArgDeclarations(argList, element, result);
+        } else if (isInForObjBody(element, forObj)) {
+            addAllFullArgDeclarations(argList, result);
+        }
+    }
+
+    private static void collectLetFullArgDeclarations(@NotNull final PsiElement element,
+        @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        OpenSCADLetElement letElement = PsiTreeUtil.getParentOfType(element, OpenSCADLetElement.class);
+        while (letElement != null) {
+            collectLetScopeFullArgDeclarations(element, letElement.getFullArgDeclarationList(), result);
+            letElement = PsiTreeUtil.getParentOfType(letElement.getParent(), OpenSCADLetElement.class);
+        }
+
+        OpenSCADBuiltinExpr builtinExpr = PsiTreeUtil.getParentOfType(element, OpenSCADBuiltinExpr.class);
+        while (builtinExpr != null) {
+            final PsiElement firstChild = builtinExpr.getFirstChild();
+            if (firstChild != null && firstChild.getNode().getElementType() == OpenSCADTypes.LET_KEYWORD) {
+                final OpenSCADFullArgDeclarationList argList = builtinExpr.getFullArgDeclarationList();
+                if (argList != null) {
+                    collectLetScopeFullArgDeclarations(element, argList, result);
+                }
+            }
+            builtinExpr = PsiTreeUtil.getParentOfType(builtinExpr.getParent(), OpenSCADBuiltinExpr.class);
+        }
+    }
+
+    private static void collectLetScopeFullArgDeclarations(@NotNull final PsiElement element,
+        @NotNull final OpenSCADFullArgDeclarationList argList,
+        @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        if (isInsideFullArgDeclarationList(element, argList)) {
+            addPrecedingFullArgDeclarations(argList, element, result);
+            return;
+        }
+        final PsiElement body = PsiTreeUtil.skipWhitespacesAndCommentsForward(argList);
+        if (body != null && PsiTreeUtil.isAncestor(body, element, false)) {
+            addAllFullArgDeclarations(argList, result);
+        }
+    }
+
+    private static boolean isInForObjBody(@NotNull final PsiElement element, @NotNull final OpenSCADForObj forObj) {
+        final OpenSCADFullArgDeclarationList argList = forObj.getFullArgDeclarationList();
+        if (argList == null) {
+            return false;
+        }
+        final PsiElement body = PsiTreeUtil.skipWhitespacesAndCommentsForward(argList);
+        return body != null && PsiTreeUtil.isAncestor(body, element, false);
+    }
+
+    private static boolean isInsideFullArgDeclarationList(@NotNull final PsiElement element,
+        @NotNull final OpenSCADFullArgDeclarationList argList) {
+        return PsiTreeUtil.isAncestor(argList, element, false) && !element.equals(argList);
+    }
+
+    private static void addPrecedingFullArgDeclarations(@NotNull final OpenSCADFullArgDeclarationList argList,
+        @NotNull final PsiElement element,
+        @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        for (final OpenSCADFullArgDeclaration declaration : PsiTreeUtil.getChildrenOfTypeAsList(argList, OpenSCADFullArgDeclaration.class)) {
+            if (declaration.equals(element) || PsiTreeUtil.isAncestor(declaration, element, false)) {
+                break;
+            }
+            result.add(declaration);
+        }
+    }
+
+    private static void addAllFullArgDeclarations(@NotNull final OpenSCADFullArgDeclarationList argList,
+        @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        result.addAll(PsiTreeUtil.getChildrenOfTypeAsList(argList, OpenSCADFullArgDeclaration.class));
     }
 
     /**

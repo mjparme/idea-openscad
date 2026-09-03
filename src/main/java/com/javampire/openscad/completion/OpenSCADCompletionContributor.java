@@ -1,8 +1,5 @@
 package com.javampire.openscad.completion;
 
-import static com.javampire.openscad.parser.OpenSCADParserTokenSets.FUNCTION_KEYWORDS;
-import static com.javampire.openscad.parser.OpenSCADParserTokenSets.WITH_FULL_ARG_DECLARATION_LIST;
-
 import com.intellij.codeInsight.completion.CompletionContributor;
 import com.intellij.codeInsight.completion.CompletionParameters;
 import com.intellij.codeInsight.completion.CompletionProvider;
@@ -43,8 +40,6 @@ import com.javampire.openscad.psi.OpenSCADArgAssignmentList;
 import com.javampire.openscad.psi.OpenSCADArgDeclaration;
 import com.javampire.openscad.psi.OpenSCADArgDeclarationList;
 import com.javampire.openscad.psi.OpenSCADExpr;
-import com.javampire.openscad.psi.OpenSCADFullArgDeclaration;
-import com.javampire.openscad.psi.OpenSCADFullArgDeclarationList;
 import com.javampire.openscad.psi.OpenSCADFunctionDeclaration;
 import com.javampire.openscad.psi.OpenSCADImportUtil;
 import com.javampire.openscad.psi.OpenSCADModuleDeclaration;
@@ -363,30 +358,7 @@ public class OpenSCADCompletionContributor extends CompletionContributor {
 
     private void addAccessibleArgumentDeclarations(final CompletionResultSet result, final PsiElement element) {
         result.addAllElements(convertToLookupElements(OpenSCADPsiImplUtil.getAccessibleArgumentDeclarations(element), null));
-
-        // for (i = [start : step : end]) binds loop variables via FULL_ARG_DECLARATION_LIST, not ARG_DECLARATION_LIST.
-        final List<PsiElement> fullArgDeclarationParents = OpenSCADPsiImplUtil.getParentsOfType(element, WITH_FULL_ARG_DECLARATION_LIST);
-        final List<PsiElement> fullArgDeclarations = fullArgDeclarationParents.stream()
-            .map(e -> PsiTreeUtil.getChildOfType(e, OpenSCADFullArgDeclarationList.class))
-            .filter(Objects::nonNull)
-            .map(e -> PsiTreeUtil.getChildOfType(e, OpenSCADFullArgDeclaration.class))
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-        result.addAllElements(convertToLookupElements(fullArgDeclarations, null));
-
-        // let (x = 1, y = 2) binds variables in a FULL_ARG_DECLARATION_LIST sibling of the let keyword.
-        final List<PsiElement> builtinExprParents = OpenSCADPsiImplUtil.getParentsOfType(element, FUNCTION_KEYWORDS);
-        final List<PsiElement> letFullArgDeclaration = builtinExprParents.stream()
-            .map(PsiElement::getFirstChild)
-            .filter(e -> e.getNode().getElementType() == OpenSCADTypes.LET_KEYWORD)
-            .map(PsiElement::getNextSibling)
-            .filter(Objects::nonNull)
-            .filter(e -> e instanceof OpenSCADFullArgDeclarationList)
-            .map(e -> PsiTreeUtil.getChildrenOfType(e, OpenSCADFullArgDeclaration.class))
-            .filter(Objects::nonNull)
-            .flatMap(Arrays::stream)
-            .collect(Collectors.toList());
-        result.addAllElements(convertToLookupElements(letFullArgDeclaration, null));
+        result.addAllElements(convertToLookupElements(OpenSCADPsiImplUtil.getAccessibleLoopBindings(element), null));
     }
 
     private void addCalleeArgumentDeclarations(final CompletionResultSet result, final PsiElement element) {
