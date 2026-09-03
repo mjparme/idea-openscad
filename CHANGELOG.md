@@ -4,8 +4,6 @@
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-09-03
-
 ### Fixed
 
 - Preview font extension check uses `FileUtilRt.getExtension` instead of deprecated `FileUtil.getExtension` (Plugin Verifier scheduled-for-removal warning)
