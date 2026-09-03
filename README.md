@@ -36,7 +36,7 @@ A native [OpenSCAD](https://openscad.org/downloads.html) executable is only requ
 
 Go in *Settings* -> *Languages & Frameworks* -> *OpenSCAD* to set the executable path and activate or deactivate the preview editor.
 
-![OpenSCAD settings: executable path, preview editor, and module completion options](docs/screenshots/settings-languages-frameworks-openscad.png)
+![OpenSCAD settings: executable path, preview editor, module completion, and WASM preview font directories](docs/screenshots/settings-languages-frameworks-openscad.png)
 
 On macOS, the default install location is usually:
 
@@ -130,7 +130,13 @@ When editing a `.scad` file, right-click in the editor or on the editor tab and 
 
 WASM preview has no access to system fonts. When bundled sources use the `text()` module or the experimental [`textmetrics()`](https://github.com/openscad/openscad/wiki/Experimental-Features) / `fontmetrics()` builtins, the preview lazy-loads the openscad-wasm **Liberation** font bundle (~8 MB). Models that only use primitives skip that download.
 
-Preview font support is limited to that bundled Liberation family and OpenSCAD defaults — not arbitrary system typefaces. Models that request other fonts may warn or render differently than in native OpenSCAD. User-configurable preview font directories are planned; until then use **Open in OpenSCAD** for full fontconfig behavior.
+Configure **WASM preview font directories** in **Settings → Languages & Frameworks → OpenSCAD** to add `.ttf`, `.otf`, and `.ttc` files from your machine. Configured folders are scanned recursively; each font file is mounted in the WASM filesystem as `/fonts/{filename}` (basename only). The Liberation bundle is still loaded when text is used; user fonts are added alongside it (64 MB total cap).
+
+**Font names:** Preview does not use your OS fontconfig aliases. Native OpenSCAD may map names like `Arial` or `sans-serif` through system config; WASM preview only knows the **family name stored inside each font file** (plus the bundled Liberation families). Use the real family name in `text()` — inspect the font in Font Book, `fc-scan`, or similar if `font = "MyFont.ttf"` does not match. Names from the macOS font menu are not always the same as the internal family name.
+
+**Duplicate filenames:** If two configured directories contain the same basename (e.g. `Regular.ttf` in different families), only one file is mounted and the last one scanned wins. Rename files or consolidate directories to avoid silent collisions.
+
+For full fontconfig behavior, use **Open in OpenSCAD**.
 
 # Issues and requests
 

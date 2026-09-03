@@ -10,6 +10,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @State(name = "OpenSCADSettings", storages = @Storage("OpenSCADSettings.xml"))
 public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettings> {
@@ -17,6 +20,7 @@ public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettin
     private String openSCADExecutable = null;
     private boolean allowPreviewEditor = false;
     private boolean fillNamedArgumentsOnModuleCompletion = false;
+    private List<String> previewFontDirectories = new ArrayList<>();
 
     public static OpenSCADSettings getInstance() {
         return ApplicationManager.getApplication().getService(OpenSCADSettings.class);
@@ -56,6 +60,15 @@ public class OpenSCADSettings implements PersistentStateComponent<OpenSCADSettin
 
     public void setFillNamedArgumentsOnModuleCompletion(final boolean fillNamedArgumentsOnModuleCompletion) {
         this.fillNamedArgumentsOnModuleCompletion = fillNamedArgumentsOnModuleCompletion;
+    }
+
+    @NotNull
+    public List<String> getPreviewFontDirectories() {
+        return previewFontDirectories != null ? previewFontDirectories : Collections.emptyList();
+    }
+
+    public void setPreviewFontDirectories(@NotNull final List<String> previewFontDirectories) {
+        this.previewFontDirectories = new ArrayList<>(previewFontDirectories);
     }
 
     public boolean hasExecutable() {

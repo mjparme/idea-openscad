@@ -36,6 +36,19 @@ function mountFiles(instance, files) {
   }
 }
 
+function mountBinaryFiles(instance, files) {
+  for (const [path, base64] of Object.entries(files)) {
+    ensureDir(instance, path);
+    unlinkIfExists(instance, path);
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    instance.FS.writeFile(path, bytes);
+  }
+}
+
 /** @param {string[]} logs */
 function summarizeRenderIssues(logs) {
   const text = logs.join("");
@@ -87,20 +100,26 @@ function discardOpenSCADInstance() {
   previewFontsLoaded = false;
 }
 
-async function ensurePreviewFonts(instance) {
+async function ensurePreviewFonts(instance, userFonts) {
   if (previewFontsLoaded) {
+    if (userFonts && Object.keys(userFonts).length > 0) {
+      mountBinaryFiles(instance, userFonts);
+    }
     return;
   }
   self.postMessage({ type: "status", message: "Loading preview fonts..." });
   const fontsUrl = new URL("vendor/openscad/openscad.fonts.js", self.location.href);
   const fontsModule = await import(/* webpackIgnore: true */ fontsUrl.href);
   fontsModule.addFonts(instance);
+  if (userFonts && Object.keys(userFonts).length > 0) {
+    mountBinaryFiles(instance, userFonts);
+  }
   previewFontsLoaded = true;
 }
 
 async function renderNow(request) {
   rendering = true;
-  const { generation, mainPath, files, loadPreviewFonts, enableTextMetrics } = request;
+  const { generation, mainPath, files, loadPreviewFonts, enableTextMetrics, userFonts } = request;
   const outputPath = `/preview-${generation}.stl`;
   /** @type {string[]} */
   const renderLogs = [];
@@ -128,7 +147,7 @@ async function renderNow(request) {
     unlinkIfExists(instance, outputPath);
 
     if (loadPreviewFonts) {
-      await ensurePreviewFonts(instance);
+      await ensurePreviewFonts(instance, userFonts);
     }
 
     self.postMessage({
@@ -192,7 +211,7 @@ async function renderNow(request) {
 }
 
 self.onmessage = (event) => {
-  const { type, generation, mainPath, files, loadPreviewFonts, enableTextMetrics } = event.data;
+  const { type, generation, mainPath, files, loadPreviewFonts, enableTextMetrics, userFonts } = event.data;
   if (type !== "render") {
     return;
   }
@@ -203,6 +222,7 @@ self.onmessage = (event) => {
     files,
     loadPreviewFonts: Boolean(loadPreviewFonts),
     enableTextMetrics: Boolean(enableTextMetrics),
+    userFonts: userFonts ?? {},
   };
   if (rendering) {
     pendingRequest = request;

@@ -1,6 +1,13 @@
 package com.javampire.openscad.editor;
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import com.javampire.openscad.settings.OpenSCADSettings;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 
 public class OpenSCADPreviewSourceCollectorTest extends BasePlatformTestCase {
 
@@ -186,6 +193,53 @@ public class OpenSCADPreviewSourceCollectorTest extends BasePlatformTestCase {
         assertNotNull(sources);
         assertTrue(sources.loadPreviewFonts());
         assertTrue(sources.enableTextMetrics());
+    }
+
+    public void testCollectLoadsUserFontsWhenConfigured() throws IOException {
+        final Path fontDirectory = Files.createTempDirectory("preview-fonts-config");
+        try {
+            Files.write(fontDirectory.resolve("Custom.ttf"), new byte[]{7, 8, 9});
+            OpenSCADSettings.getInstance().setPreviewFontDirectories(List.of(fontDirectory.toString()));
+
+            final var main = myFixture.addFileToProject("models/letter.scad", """
+                    linear_extrude(height = 1) text(text = "B", font = "Custom");
+                    """);
+            final var sources = OpenSCADPreviewSourceCollector.collect(
+                    myFixture.getProject(),
+                    main.getVirtualFile()
+            );
+
+            assertNotNull(sources);
+            assertTrue(sources.loadPreviewFonts());
+            assertEquals(1, sources.userFonts().size());
+            assertTrue(Arrays.equals(new byte[]{7, 8, 9}, sources.userFonts().get("/fonts/Custom.ttf")));
+        }
+        finally {
+            OpenSCADSettings.getInstance().setPreviewFontDirectories(List.of());
+            com.intellij.openapi.util.io.FileUtil.delete(fontDirectory);
+        }
+    }
+
+    public void testCollectSkipsUserFontsWhenTextNotUsed() throws IOException {
+        final Path fontDirectory = Files.createTempDirectory("preview-fonts-unused");
+        try {
+            Files.write(fontDirectory.resolve("Custom.ttf"), new byte[]{1});
+            OpenSCADSettings.getInstance().setPreviewFontDirectories(List.of(fontDirectory.toString()));
+
+            final var main = myFixture.addFileToProject("models/plain.scad", "cube(1);");
+            final var sources = OpenSCADPreviewSourceCollector.collect(
+                    myFixture.getProject(),
+                    main.getVirtualFile()
+            );
+
+            assertNotNull(sources);
+            assertFalse(sources.loadPreviewFonts());
+            assertTrue(sources.userFonts().isEmpty());
+        }
+        finally {
+            OpenSCADSettings.getInstance().setPreviewFontDirectories(List.of());
+            com.intellij.openapi.util.io.FileUtil.delete(fontDirectory);
+        }
     }
 
     public void testGetFileContentUsesDocumentText() {

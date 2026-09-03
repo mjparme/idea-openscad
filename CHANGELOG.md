@@ -7,6 +7,7 @@
 ### Added
 
 - WASM preview lazy-loads the openscad-wasm **Liberation** font bundle (~8 MB) when bundled sources use `text()` or call `textmetrics()` / `fontmetrics()`; includes Liberation Sans, Serif, and Mono (regular/bold/italic). Models without text skip the download. Experimental builtins also pass `--enable=textmetrics`.
+- **WASM preview font directories** setting: scan configured folders for `.ttf`/`.otf`/`.ttc` files and mount them in the WASM preview under `/fonts/` (64 MB cap) alongside the Liberation bundle.
 
 ### Fixed
 

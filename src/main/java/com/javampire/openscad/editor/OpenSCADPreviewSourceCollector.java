@@ -16,6 +16,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.javampire.openscad.psi.OpenSCADImportUtil;
 import com.javampire.openscad.settings.OpenSCADInfo;
+import com.javampire.openscad.settings.OpenSCADSettings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,16 +51,10 @@ public final class OpenSCADPreviewSourceCollector {
     private OpenSCADPreviewSourceCollector() {
     }
 
-    public record PreviewSources(
-            @NotNull String mainPath,
-            @NotNull Map<String, String> files,
-            boolean loadPreviewFonts,
-            boolean enableTextMetrics
-    ) {
-    }
+    public record PreviewSources(@NotNull String mainPath, @NotNull Map<String, String> files, boolean loadPreviewFonts, boolean enableTextMetrics,
+            @NotNull Map<String, byte[]> userFonts) {}
 
-    private record PendingFile(@NotNull String virtualPath, @Nullable PsiFile psiFile, @Nullable VirtualFile virtualFile) {
-    }
+    private record PendingFile(@NotNull String virtualPath, @Nullable PsiFile psiFile, @Nullable VirtualFile virtualFile) {}
 
     @Nullable
     public static PreviewSources collect(@NotNull final Project project, @NotNull final VirtualFile scadFile) {
@@ -126,12 +121,11 @@ public final class OpenSCADPreviewSourceCollector {
             }
         }
 
-        return new PreviewSources(
-                mainPath,
-                files,
-                requiresPreviewFonts(files),
-                requiresTextMetrics(files)
-        );
+        final boolean loadPreviewFonts = requiresPreviewFonts(files);
+        final Map<String, byte[]> userFonts = loadPreviewFonts
+                ? OpenSCADPreviewFontCollector.collectUserFonts(OpenSCADSettings.getInstance().getPreviewFontDirectories())
+                : Map.of();
+        return new PreviewSources(mainPath, files, loadPreviewFonts, requiresTextMetrics(files), userFonts);
     }
 
     static boolean requiresPreviewFonts(@NotNull final Map<String, String> files) {
@@ -171,13 +165,8 @@ public final class OpenSCADPreviewSourceCollector {
     }
 
     @Nullable
-    private static PendingFile resolveImportedFile(@NotNull final Project project,
-                                                   @NotNull final VirtualFile contentRoot,
-                                                   @NotNull final List<String> libraryRoots,
-                                                   @Nullable final PsiFile importerPsiFile,
-                                                   @Nullable final VirtualFile importerVirtualFile,
-                                                   @NotNull final String importerProjectRelativePath,
-                                                   @NotNull final String importPath,
+    private static PendingFile resolveImportedFile(@NotNull final Project project, @NotNull final VirtualFile contentRoot, @NotNull final List<String> libraryRoots, @Nullable final PsiFile importerPsiFile,
+                                                   @Nullable final VirtualFile importerVirtualFile, @NotNull final String importerProjectRelativePath, @NotNull final String importPath,
                                                    @NotNull final String importVirtualPath) {
         final VirtualFile importerOnDisk = firstNonNull(importerVirtualFile, psiVirtualFile(importerPsiFile));
         if (importerOnDisk != null && importerOnDisk.getParent() != null) {

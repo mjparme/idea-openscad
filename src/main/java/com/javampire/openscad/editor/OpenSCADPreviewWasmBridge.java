@@ -15,8 +15,7 @@ public final class OpenSCADPreviewWasmBridge {
     private OpenSCADPreviewWasmBridge() {
     }
 
-    public static void render(@NotNull final CefBrowser browser,
-                              @NotNull final OpenSCADPreviewSourceCollector.PreviewSources sources) {
+    public static void render(@NotNull final CefBrowser browser, @NotNull final OpenSCADPreviewSourceCollector.PreviewSources sources) {
         final String json = toJson(sources);
         final String encoded = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
         final String frameUrl = browser.getURL();
@@ -37,7 +36,9 @@ public final class OpenSCADPreviewWasmBridge {
         json.append("{\"mainPath\":").append(quote(sources.mainPath()))
                 .append(",\"loadPreviewFonts\":").append(sources.loadPreviewFonts())
                 .append(",\"enableTextMetrics\":").append(sources.enableTextMetrics())
-                .append(",\"files\":{");
+                .append(",\"userFonts\":{");
+        appendBase64Map(json, sources.userFonts());
+        json.append("},\"files\":{");
         boolean first = true;
         for (final Map.Entry<String, String> entry : sources.files().entrySet()) {
             if (!first) {
@@ -48,6 +49,17 @@ public final class OpenSCADPreviewWasmBridge {
         }
         json.append("}}");
         return json.toString();
+    }
+
+    private static void appendBase64Map(@NotNull final StringBuilder json, @NotNull final Map<String, byte[]> values) {
+        boolean first = true;
+        for (final Map.Entry<String, byte[]> entry : values.entrySet()) {
+            if (!first) {
+                json.append(',');
+            }
+            first = false;
+            json.append(quote(entry.getKey())).append(':').append(quote(Base64.getEncoder().encodeToString(entry.getValue())));
+        }
     }
 
     @NotNull
