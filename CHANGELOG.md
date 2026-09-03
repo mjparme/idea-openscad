@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-02
+
 ### Added
 
 - WASM preview lazy-loads the openscad-wasm **Liberation** font bundle (~8 MB) when bundled sources use `text()` or call `textmetrics()` / `fontmetrics()`; includes Liberation Sans, Serif, and Mono (regular/bold/italic). Models without text skip the download. Experimental builtins also pass `--enable=textmetrics`.
@@ -107,7 +109,8 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 - Stub index crash when a declaration name is null
 - Plugin Verifier failures by removing internal API usages
 
-[Unreleased]: https://github.com/mjparme/idea-openscad/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/mjparme/idea-openscad/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/mjparme/idea-openscad/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/mjparme/idea-openscad/compare/v1.1.0...v1.2.1
 [1.2.0]: https://github.com/mjparme/idea-openscad/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mjparme/idea-openscad/compare/v1.0.0...v1.1.0
