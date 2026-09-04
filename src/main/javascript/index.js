@@ -771,98 +771,388 @@ function setViewPreset(view) {
   render();
 }
 
-function createViewPresets() {
-  const style = document.createElement("style");
-  style.textContent = `
-    #viewCube {
-      position: fixed;
-      top: 8px;
-      right: 8px;
-      display: grid;
-      grid-template-columns: repeat(3, 28px);
-      gap: 2px;
-      z-index: 10;
-      font-family: -apple-system, system-ui, sans-serif;
-      font-size: 9px;
-      user-select: none;
-    }
-    #viewCube .vc-btn {
-      width: 28px;
-      height: 22px;
-      line-height: 22px;
-      text-align: center;
-      background: rgba(60, 63, 65, 0.92);
-      border: 1px solid #505050;
-      border-radius: 2px;
-      color: #999;
-      cursor: pointer;
-    }
-    #viewCube .vc-btn:hover {
-      background: rgba(78, 82, 84, 0.95);
-      color: #ddd;
-    }
-    #viewCube .vc-empty { visibility: hidden; }
-  `;
-  document.head.appendChild(style);
+const VIEW_CUBE_CSS_SIZE = 104;
+const VIEW_CUBE_SCALE = 28;
+const VIEW_CUBE_INV = new THREE.Quaternion();
+const VIEW_CUBE_SCRATCH = new THREE.Vector3();
+const VIEW_CUBE_FACES = [
+  {
+    name: "front",
+    label: "FRONT",
+    nx: 0,
+    ny: -1,
+    nz: 0,
+    corners: [
+      [-1, -1, -1],
+      [1, -1, -1],
+      [1, -1, 1],
+      [-1, -1, 1],
+    ],
+  },
+  {
+    name: "back",
+    label: "BACK",
+    nx: 0,
+    ny: 1,
+    nz: 0,
+    corners: [
+      [1, 1, -1],
+      [-1, 1, -1],
+      [-1, 1, 1],
+      [1, 1, 1],
+    ],
+  },
+  {
+    name: "right",
+    label: "RIGHT",
+    nx: 1,
+    ny: 0,
+    nz: 0,
+    corners: [
+      [1, -1, -1],
+      [1, 1, -1],
+      [1, 1, 1],
+      [1, -1, 1],
+    ],
+  },
+  {
+    name: "left",
+    label: "LEFT",
+    nx: -1,
+    ny: 0,
+    nz: 0,
+    corners: [
+      [-1, 1, -1],
+      [-1, -1, -1],
+      [-1, -1, 1],
+      [-1, 1, 1],
+    ],
+  },
+  {
+    name: "top",
+    label: "TOP",
+    nx: 0,
+    ny: 0,
+    nz: 1,
+    corners: [
+      [-1, -1, 1],
+      [1, -1, 1],
+      [1, 1, 1],
+      [-1, 1, 1],
+    ],
+  },
+  {
+    name: "bottom",
+    label: "BOTTOM",
+    nx: 0,
+    ny: 0,
+    nz: -1,
+    corners: [
+      [-1, 1, -1],
+      [1, 1, -1],
+      [1, -1, -1],
+      [-1, -1, -1],
+    ],
+  },
+];
 
-  const container = document.createElement("div");
-  container.id = "viewCube";
-  const layout = [
-    ["", "top", ""],
-    ["left", "front", "right"],
-    ["", "bottom", "back"],
-  ];
-  for (const row of layout) {
-    for (const view of row) {
-      const cell = document.createElement("div");
-      if (!view) {
-        cell.className = "vc-empty";
-      } else {
-        cell.className = "vc-btn";
-        cell.textContent =
-          view === "bottom" ? "Btm" : view.charAt(0).toUpperCase() + view.slice(1);
-        cell.title = view;
-        cell.addEventListener("click", () => setViewPreset(view));
-      }
-      container.appendChild(cell);
+const viewCubeCanvas = document.createElement("canvas");
+viewCubeCanvas.id = "viewCube";
+viewCubeCanvas.title = "Click a face to set the view";
+Object.assign(viewCubeCanvas.style, {
+  position: "fixed",
+  top: "8px",
+  right: "8px",
+  width: VIEW_CUBE_CSS_SIZE + "px",
+  height: VIEW_CUBE_CSS_SIZE + "px",
+  zIndex: "20",
+  pointerEvents: "auto",
+  cursor: "default",
+});
+document.body.appendChild(viewCubeCanvas);
+const viewCubeCtx = viewCubeCanvas.getContext("2d");
+/** @type {{ name: string, pts: { x: number, y: number }[], depth: number, area: number }[]} */
+let viewCubeHitFaces = [];
+let viewCubeHoverName = null;
+
+function sizeViewCubeCanvas() {
+  const dpr = Math.max(window.devicePixelRatio || 1, 1);
+  viewCubeCanvas.width = Math.round(VIEW_CUBE_CSS_SIZE * dpr);
+  viewCubeCanvas.height = Math.round(VIEW_CUBE_CSS_SIZE * dpr);
+}
+
+function projectViewCubePoint(x, y, z, cx, cy) {
+  VIEW_CUBE_SCRATCH.set(x, y, z).applyQuaternion(VIEW_CUBE_INV);
+  return {
+    x: cx + VIEW_CUBE_SCRATCH.x * VIEW_CUBE_SCALE,
+    y: cy - VIEW_CUBE_SCRATCH.y * VIEW_CUBE_SCALE,
+    z: VIEW_CUBE_SCRATCH.z,
+  };
+}
+
+function viewCubeQuadArea(pts) {
+  let sum = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % pts.length];
+    sum += a.x * b.y - b.x * a.y;
+  }
+  return Math.abs(sum) / 2;
+}
+
+function pointInViewCubeQuad(px, py, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const xi = pts[i].x;
+    const yi = pts[i].y;
+    const xj = pts[j].x;
+    const yj = pts[j].y;
+    const intersect =
+      yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi + 1e-12) + xi;
+    if (intersect) {
+      inside = !inside;
     }
   }
-  document.body.appendChild(container);
+  return inside;
 }
 
-const AXIS_OVERLAY_SIZE = 128;
-const axisOverlayScene = new THREE.Scene();
-const axisOverlayCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 10);
-axisOverlayCamera.position.set(0, 0, 2);
-const axisOverlayRoot = new THREE.Object3D();
-axisOverlayScene.add(axisOverlayRoot);
-axisOverlayRoot.add(new THREE.AxesHelper(0.85));
+function viewCubeLocalPoint(event) {
+  const rect = viewCubeCanvas.getBoundingClientRect();
+  const w = rect.width || VIEW_CUBE_CSS_SIZE;
+  const h = rect.height || VIEW_CUBE_CSS_SIZE;
+  return {
+    x: ((event.clientX - rect.left) / w) * VIEW_CUBE_CSS_SIZE,
+    y: ((event.clientY - rect.top) / h) * VIEW_CUBE_CSS_SIZE,
+  };
+}
 
-const axisOverlayRenderer = new THREE.WebGLRenderer({
-  alpha: true,
-  antialias: true,
+function hitViewCubeFace(px, py) {
+  for (let i = viewCubeHitFaces.length - 1; i >= 0; i--) {
+    const face = viewCubeHitFaces[i];
+    if (pointInViewCubeQuad(px, py, face.pts)) {
+      return face;
+    }
+  }
+  return null;
+}
+
+function renderViewCube() {
+  if (!viewCubeCtx) {
+    return;
+  }
+  const dpr = viewCubeCanvas.width / VIEW_CUBE_CSS_SIZE;
+  const ctx = viewCubeCtx;
+  const size = VIEW_CUBE_CSS_SIZE;
+  const cx = size / 2;
+  const cy = size / 2;
+
+  camera.updateMatrixWorld();
+  VIEW_CUBE_INV.copy(camera.quaternion).invert();
+
+  const projected = [];
+  for (const face of VIEW_CUBE_FACES) {
+    VIEW_CUBE_SCRATCH.set(face.nx, face.ny, face.nz).applyQuaternion(VIEW_CUBE_INV);
+    if (VIEW_CUBE_SCRATCH.z <= 0.02) {
+      continue;
+    }
+    const pts = face.corners.map((c) =>
+      projectViewCubePoint(c[0], c[1], c[2], cx, cy),
+    );
+    const depth = pts.reduce((s, p) => s + p.z, 0) / pts.length;
+    projected.push({
+      name: face.name,
+      label: face.label,
+      pts,
+      depth,
+      area: viewCubeQuadArea(pts),
+    });
+  }
+  projected.sort((a, b) => a.depth - b.depth);
+  viewCubeHitFaces = projected;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.48, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(18, 18, 18, 0.28)";
+  ctx.fill();
+
+  ctx.lineJoin = "round";
+  ctx.font = "bold 10px -apple-system, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  for (const face of projected) {
+    ctx.beginPath();
+    ctx.moveTo(face.pts[0].x, face.pts[0].y);
+    for (let i = 1; i < face.pts.length; i++) {
+      ctx.lineTo(face.pts[i].x, face.pts[i].y);
+    }
+    ctx.closePath();
+    const hovered = face.name === viewCubeHoverName;
+    ctx.fillStyle = hovered ? "rgba(210, 220, 230, 0.95)" : "rgba(168, 176, 184, 0.92)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(40, 44, 48, 0.9)";
+    ctx.lineWidth = 1.25;
+    ctx.stroke();
+
+    if (face.area > 380) {
+      const mx = face.pts.reduce((s, p) => s + p.x, 0) / face.pts.length;
+      const my = face.pts.reduce((s, p) => s + p.y, 0) / face.pts.length;
+      ctx.fillStyle = hovered ? "#1a1a1a" : "#2c2c2c";
+      ctx.fillText(face.label, mx, my);
+    }
+  }
+}
+
+function createViewPresets() {
+  sizeViewCubeCanvas();
+
+  const stopOrbit = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  viewCubeCanvas.addEventListener("pointerdown", stopOrbit);
+  viewCubeCanvas.addEventListener("pointerup", stopOrbit);
+  viewCubeCanvas.addEventListener("wheel", stopOrbit, { passive: false });
+  viewCubeCanvas.addEventListener("contextmenu", stopOrbit);
+
+  viewCubeCanvas.addEventListener("pointermove", (event) => {
+    const { x, y } = viewCubeLocalPoint(event);
+    const hit = hitViewCubeFace(x, y);
+    const name = hit ? hit.name : null;
+    viewCubeCanvas.style.cursor = name ? "pointer" : "default";
+    if (name !== viewCubeHoverName) {
+      viewCubeHoverName = name;
+      renderViewCube();
+    }
+  });
+
+  viewCubeCanvas.addEventListener("pointerleave", () => {
+    viewCubeCanvas.style.cursor = "default";
+    if (viewCubeHoverName) {
+      viewCubeHoverName = null;
+      renderViewCube();
+    }
+  });
+
+  viewCubeCanvas.addEventListener("click", (event) => {
+    stopOrbit(event);
+    const { x, y } = viewCubeLocalPoint(event);
+    const hit = hitViewCubeFace(x, y);
+    if (hit) {
+      setViewPreset(hit.name);
+    }
+  });
+}
+
+/** OpenSCAD-style corner triad: 2D canvas, not a second WebGL viewport. */
+const AXIS_OVERLAY_CSS_SIZE = 120;
+const AXIS_OVERLAY_AXES = [
+  { name: "X", color: "#e53935", dir: new THREE.Vector3(1, 0, 0) },
+  { name: "Y", color: "#43a047", dir: new THREE.Vector3(0, 1, 0) },
+  { name: "Z", color: "#1e88e5", dir: new THREE.Vector3(0, 0, 1) },
+];
+const axisOverlayInvQuat = new THREE.Quaternion();
+const axisOverlayScratch = new THREE.Vector3();
+
+const axisOverlayCanvas = document.createElement("canvas");
+axisOverlayCanvas.id = "axisOrientation";
+axisOverlayCanvas.setAttribute("aria-hidden", "true");
+Object.assign(axisOverlayCanvas.style, {
+  position: "fixed",
+  right: "8px",
+  bottom: "36px",
+  width: AXIS_OVERLAY_CSS_SIZE + "px",
+  height: AXIS_OVERLAY_CSS_SIZE + "px",
+  zIndex: "20",
+  pointerEvents: "none",
 });
-axisOverlayRenderer.setPixelRatio(window.devicePixelRatio);
-axisOverlayRenderer.setSize(AXIS_OVERLAY_SIZE, AXIS_OVERLAY_SIZE, false);
-axisOverlayRenderer.setClearColor(0x000000, 0);
-axisOverlayRenderer.domElement.style.position = "fixed";
-axisOverlayRenderer.domElement.style.right = "8px";
-axisOverlayRenderer.domElement.style.bottom = "8px";
-axisOverlayRenderer.domElement.style.width = AXIS_OVERLAY_SIZE + "px";
-axisOverlayRenderer.domElement.style.height = AXIS_OVERLAY_SIZE + "px";
-axisOverlayRenderer.domElement.style.zIndex = "10";
-axisOverlayRenderer.domElement.style.pointerEvents = "none";
-document.body.appendChild(axisOverlayRenderer.domElement);
+document.body.appendChild(axisOverlayCanvas);
+const axisOverlayCtx = axisOverlayCanvas.getContext("2d");
+
+function sizeAxisOverlayCanvas() {
+  const dpr = Math.max(window.devicePixelRatio || 1, 1);
+  axisOverlayCanvas.width = Math.round(AXIS_OVERLAY_CSS_SIZE * dpr);
+  axisOverlayCanvas.height = Math.round(AXIS_OVERLAY_CSS_SIZE * dpr);
+}
 
 function renderAxisOverlay() {
-  axisOverlayRoot.quaternion.copy(camera.quaternion).invert();
-  axisOverlayRenderer.render(axisOverlayScene, axisOverlayCamera);
+  if (!axisOverlayCtx) {
+    return;
+  }
+  const dpr = axisOverlayCanvas.width / AXIS_OVERLAY_CSS_SIZE;
+  const ctx = axisOverlayCtx;
+  const size = AXIS_OVERLAY_CSS_SIZE;
+  const cx = size / 2;
+  const cy = size / 2;
+  const tipR = 8;
+  const axisLen = size * 0.38;
+
+  camera.updateMatrixWorld();
+  axisOverlayInvQuat.copy(camera.quaternion).invert();
+
+  const projected = AXIS_OVERLAY_AXES.map((axis) => {
+    axisOverlayScratch.copy(axis.dir).applyQuaternion(axisOverlayInvQuat);
+    return {
+      name: axis.name,
+      color: axis.color,
+      x: cx + axisOverlayScratch.x * axisLen,
+      y: cy - axisOverlayScratch.y * axisLen,
+      depth: axisOverlayScratch.z,
+    };
+  }).sort((a, b) => a.depth - b.depth);
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.46, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(20, 20, 20, 0.45)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.lineCap = "round";
+  for (const axis of projected) {
+    const dx = axis.x - cx;
+    const dy = axis.y - cy;
+    const dist = Math.hypot(dx, dy) || 1;
+    const stop = Math.max(dist - tipR, 0);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + (dx / dist) * stop, cy + (dy / dist) * stop);
+    ctx.strokeStyle = axis.color;
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+  }
+
+  ctx.font = "bold 12px -apple-system, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (const axis of projected) {
+    ctx.beginPath();
+    ctx.arc(axis.x, axis.y, tipR, 0, Math.PI * 2);
+    ctx.fillStyle = axis.color;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.lineWidth = 1.25;
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(axis.name, axis.x, axis.y + 0.5);
+  }
 }
+
+sizeAxisOverlayCanvas();
 
 // Render scene
 function render() {
   renderer.render(scene, camera);
   renderAxisOverlay();
+  renderViewCube();
 }
 
 function animate() {
@@ -894,6 +1184,8 @@ function updateRendererSize() {
   camera.updateProjectionMatrix();
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(width, height, false);
+  sizeAxisOverlayCanvas();
+  sizeViewCubeCanvas();
   render();
 }
 

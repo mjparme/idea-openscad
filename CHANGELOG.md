@@ -7,6 +7,7 @@
 ### Added
 
 - Preview corner axis orientation widget (OpenSCAD-style labeled X/Y/Z triad) that tracks camera rotation
+- Preview view cube (click a face for Front/Back/Left/Right/Top/Bottom) that tracks camera rotation
 
 ### Fixed
 
