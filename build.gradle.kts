@@ -1,5 +1,6 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -198,6 +199,8 @@ intellijPlatform {
     pluginVerification {
         ides {
             recommended()
+            // recommended() is latest patch per major (e.g. 2026.2.2). Explicit 2026.2.1 keeps Marketplace/CI coverage of sinceBuild 262's first patch.
+            create(IntelliJPlatformType.IntellijIdea, "2026.2.1")
         }
     }
 }
