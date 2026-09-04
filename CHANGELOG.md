@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-03
+
 ### Added
 
 - Preview corner axis orientation widget (OpenSCAD-style labeled X/Y/Z triad) that tracks camera rotation
@@ -128,7 +130,8 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 - Stub index crash when a declaration name is null
 - Plugin Verifier failures by removing internal API usages
 
-[Unreleased]: https://github.com/mjparme/idea-openscad/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/mjparme/idea-openscad/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/mjparme/idea-openscad/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/mjparme/idea-openscad/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/mjparme/idea-openscad/compare/v1.1.0...v1.2.1
 [1.2.0]: https://github.com/mjparme/idea-openscad/compare/v1.1.0...v1.2.0
