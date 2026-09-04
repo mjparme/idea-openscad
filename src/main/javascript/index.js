@@ -4,9 +4,11 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 
 const NAME_MODEL = "SCAD_model";
 const NAME_GRID = "GRID";
+const NAME_GRID_LABELS = "GRID_LABELS";
 const NAME_AXIS = "AXIS";
 const NAME_CAMERA = "CAMERA";
-const GRID_COLOR = 0x909090;
+const GRID_COLOR = 0x6a6a6a;
+const GRID_MAJOR_COLOR = 0xa8a8a8;
 const MODEL_COLOR = 0xfef353;
 const PREVIEW_PREFIX = "$preview=true;\n";
 /** Bumped when viewer coords change — clears stale camera session keys. */
@@ -205,6 +207,23 @@ function ensurePreviewUi() {
     color: #666;
     cursor: default;
   }
+  #previewGridLegend {
+    position: fixed;
+    left: 8px;
+    bottom: 36px;
+    z-index: 20;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font: 11px/1.3 -apple-system, system-ui, sans-serif;
+    color: #e8e8e8;
+    background: rgba(20, 20, 20, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+    user-select: none;
+  }
+  #previewGridLegend.hidden {
+    display: none;
+  }
   `;
   document.head.appendChild(style);
 
@@ -228,6 +247,11 @@ function ensurePreviewUi() {
     + "</div>"
     + '<div id="previewConsoleBody"></div>';
   document.body.appendChild(consoleRoot);
+
+  const gridLegend = document.createElement("div");
+  gridLegend.id = "previewGridLegend";
+  gridLegend.className = "hidden";
+  document.body.appendChild(gridLegend);
 
   const header = consoleRoot.querySelector("#previewConsoleHeader");
   header.addEventListener("click", () => {
@@ -381,6 +405,24 @@ function updatePreviewConsoleChrome() {
   toggleLabel.textContent = previewConsoleExpanded ? "Hide" : "Show";
   ui.consoleRoot.classList.toggle("collapsed", !previewConsoleExpanded);
   setPreviewConsoleState(previewConsoleState);
+  layoutBottomOverlays();
+  requestAnimationFrame(layoutBottomOverlays);
+}
+
+function layoutBottomOverlays() {
+  const consoleRoot = document.getElementById("previewConsole");
+  const bottom = consoleRoot
+    ? Math.round(consoleRoot.getBoundingClientRect().height) + 8
+    : 36;
+  const offset = bottom + "px";
+  const axis = document.getElementById("axisOrientation");
+  if (axis) {
+    axis.style.bottom = offset;
+  }
+  const legend = document.getElementById("previewGridLegend");
+  if (legend) {
+    legend.style.bottom = offset;
+  }
 }
 
 function setPreviewConsoleExpanded(expanded) {
@@ -444,8 +486,19 @@ function appendPreviewLog(text, stream = "stdout") {
 }
 
 const PREVIEW_BACKGROUNDS = {
-  clearsky: { top: "#87ceeb", bottom: "#c9e9f6" },
   cornfield: { top: "#ffffe5", bottom: "#ffffe5" },
+  metallic: { top: "#aaaaff", bottom: "#aaaaff" },
+  sunset: { top: "#aa4444", bottom: "#aa4444" },
+  starnight: { top: "#000000", bottom: "#000000" },
+  beforedawn: { top: "#333333", bottom: "#333333" },
+  nature: { top: "#fafafa", bottom: "#fafafa" },
+  "daylight-gem": { top: "#f0f0f0", bottom: "#f0f0f0" },
+  "nocturnal-gem": { top: "#0c0c0c", bottom: "#0c0c0c" },
+  deepocean: { top: "#333333", bottom: "#333333" },
+  solarized: { top: "#fdf6e3", bottom: "#fdf6e3" },
+  tomorrow: { top: "#f8f8f8", bottom: "#f8f8f8" },
+  "tomorrow-night": { top: "#1d1f21", bottom: "#1d1f21" },
+  clearsky: { top: "#87ceeb", bottom: "#c9e9f6" },
   "dark-gradient": { top: "#2d2d2d", bottom: "#1a1a1a" },
 };
 const DEFAULT_PREVIEW_BACKGROUND = "dark-gradient";
@@ -565,10 +618,30 @@ function getModelCenter() {
   return box.getCenter(new THREE.Vector3());
 }
 
+function disposeObject3D(object) {
+  object.traverse((child) => {
+    if (child.geometry) {
+      child.geometry.dispose();
+    }
+    const materials = child.material
+      ? Array.isArray(child.material)
+        ? child.material
+        : [child.material]
+      : [];
+    for (const material of materials) {
+      if (material.map) {
+        material.map.dispose();
+      }
+      material.dispose();
+    }
+  });
+}
+
 function removeSceneObject(name) {
   const object = scene.getObjectByName(name);
   if (object) {
     scene.remove(object);
+    disposeObject3D(object);
   }
 }
 
@@ -583,23 +656,208 @@ function showAxis(enabled) {
   window.cefQuery({ request: "showAxis=" + enabled });
 }
 
-// Grid on XY plane (ground at Z=0 in OpenSCAD)
+function niceGridStep(span) {
+  const target = Math.max(span / 10, 1e-9);
+  const exp = Math.pow(10, Math.floor(Math.log10(target)));
+  const n = target / exp;
+  if (n <= 1) {
+    return exp;
+  }
+  if (n <= 2) {
+    return 2 * exp;
+  }
+  if (n <= 5) {
+    return 5 * exp;
+  }
+  return 10 * exp;
+}
+
+function snapHalfCellCount(count) {
+  return Math.max(5, Math.ceil(count / 5) * 5);
+}
+
+function formatGridUnits(step) {
+  if (!Number.isFinite(step)) {
+    return String(step);
+  }
+  if (Math.abs(step - Math.round(step)) < 1e-9) {
+    return String(Math.round(step));
+  }
+  return String(parseFloat(step.toPrecision(6)));
+}
+
+function updateGridLegend(enabled, step) {
+  ensurePreviewUi();
+  let legend = document.getElementById("previewGridLegend");
+  if (!legend) {
+    legend = document.createElement("div");
+    legend.id = "previewGridLegend";
+    document.body.appendChild(legend);
+  }
+  if (!enabled) {
+    legend.classList.add("hidden");
+    return;
+  }
+  legend.textContent = "Grid: " + formatGridUnits(step) + " units / cell";
+  legend.classList.remove("hidden");
+}
+
+function getGridLayout() {
+  const box = getModelBox();
+  let minX = 0;
+  let maxX = 10;
+  let minY = 0;
+  let maxY = 10;
+  if (box) {
+    minX = box.min.x;
+    maxX = box.max.x;
+    minY = box.min.y;
+    maxY = box.max.y;
+  }
+  const span = Math.max(maxX - minX, maxY - minY, 1);
+  let step = niceGridStep(span);
+  const maxAbs = Math.max(
+    Math.abs(minX),
+    Math.abs(maxX),
+    Math.abs(minY),
+    Math.abs(maxY),
+    step,
+  );
+  let halfCells = snapHalfCellCount((maxAbs + 2 * step) / step);
+  let divisions = halfCells * 2;
+  let size = divisions * step;
+  if (divisions > 200) {
+    step = niceGridStep(size / 10);
+    halfCells = snapHalfCellCount((maxAbs + 2 * step) / step);
+    divisions = halfCells * 2;
+    size = divisions * step;
+  }
+  const majorEvery = divisions % 10 === 0 ? 10 : divisions % 5 === 0 ? 5 : 0;
+  return { size, step, divisions, majorEvery };
+}
+
+function createGridTickLabel(text, x, y, z, height) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "bold 32px -apple-system, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const metrics = ctx.measureText(text);
+  const padX = 16;
+  const boxW = Math.min(canvas.width - 8, Math.max(48, metrics.width + padX * 2));
+  const boxH = 44;
+  const boxX = (canvas.width - boxW) / 2;
+  const boxY = (canvas.height - boxH) / 2;
+  ctx.fillStyle = "rgba(18, 18, 18, 0.72)";
+  ctx.fillRect(boxX, boxY, boxW, boxH);
+  ctx.fillStyle = "#f2f2f2";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 1);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+    }),
+  );
+  sprite.position.set(x, y, z);
+  sprite.scale.set(height * (canvas.width / canvas.height), height, 1);
+  sprite.renderOrder = 1;
+  sprite.frustumCulled = false;
+  return sprite;
+}
+
+let showGridLabelsEnabled = true;
+
+function syncGridLabels(root, size, step, divisions, majorEvery) {
+  const existing = root.getObjectByName(NAME_GRID_LABELS);
+  if (existing) {
+    root.remove(existing);
+    disposeObject3D(existing);
+  }
+  if (!showGridLabelsEnabled || majorEvery <= 0) {
+    return;
+  }
+  const labels = new THREE.Group();
+  labels.name = NAME_GRID_LABELS;
+  addGridEdgeLabels(labels, size, step, divisions, majorEvery);
+  root.add(labels);
+}
+
+function addGridEdgeLabels(root, size, step, divisions, majorEvery) {
+  if (majorEvery <= 0) {
+    return;
+  }
+  const halfCells = divisions / 2;
+  const half = size / 2;
+  const out = step * 0.7;
+  const lift = Math.max(step * 0.02, 0.02);
+  const height = Math.max(step * 1.15, size * 0.028);
+  for (let i = -halfCells; i <= halfCells; i += majorEvery) {
+    const v = i * step;
+    const label = formatGridUnits(v);
+    root.add(createGridTickLabel(label, v, -half - out, lift, height));
+    if (i !== -halfCells) {
+      root.add(createGridTickLabel(label, -half - out, v, lift, height));
+    }
+  }
+}
+
+// Grid on XY plane (ground at Z=0 in OpenSCAD). Cell size is a 1-2-5-10 step
+// in model units; extent covers origin and the model so geometry is not clipped.
 function showGrid(enabled) {
   removeSceneObject(NAME_GRID);
   if (enabled) {
-    const divisions = 10;
-    const grid = new THREE.GridHelper(
-      getModelSize(),
+    const { size, step, divisions, majorEvery } = getGridLayout();
+    updateGridLegend(true, step);
+    const root = new THREE.Group();
+    root.name = NAME_GRID;
+
+    const minor = new THREE.GridHelper(
+      size,
       divisions,
       new THREE.Color(GRID_COLOR),
       new THREE.Color(GRID_COLOR),
     );
-    grid.name = NAME_GRID;
-    grid.rotation.x = Math.PI / 2;
-    grid.receiveShadow = true;
-    scene.add(grid);
+    minor.rotation.x = Math.PI / 2;
+    minor.receiveShadow = true;
+    root.add(minor);
+
+    if (majorEvery > 0 && divisions / majorEvery >= 2) {
+      const major = new THREE.GridHelper(
+        size,
+        divisions / majorEvery,
+        new THREE.Color(GRID_MAJOR_COLOR),
+        new THREE.Color(GRID_MAJOR_COLOR),
+      );
+      major.rotation.x = Math.PI / 2;
+      major.receiveShadow = true;
+      root.add(major);
+    }
+
+    syncGridLabels(root, size, step, divisions, majorEvery);
+
+    scene.add(root);
+  } else {
+    updateGridLegend(false);
   }
   window.cefQuery({ request: "showGrid=" + enabled });
+}
+
+function showGridLabels(enabled) {
+  showGridLabelsEnabled = Boolean(enabled);
+  sessionStorage.setItem("showGridLabels", String(showGridLabelsEnabled));
+  const grid = scene.getObjectByName(NAME_GRID);
+  if (grid) {
+    const { size, step, divisions, majorEvery } = getGridLayout();
+    syncGridLabels(grid, size, step, divisions, majorEvery);
+  }
+  window.cefQuery({ request: "showGridLabels=" + showGridLabelsEnabled });
 }
 
 // Model color
@@ -626,6 +884,7 @@ function saveConfiguration() {
     "showGrid",
     (typeof scene.getObjectByName(NAME_GRID) === "object").toString(),
   );
+  sessionStorage.setItem("showGridLabels", String(showGridLabelsEnabled));
   sessionStorage.setItem("previewBackground", sessionStorage.getItem("previewBackground") || DEFAULT_PREVIEW_BACKGROUND);
   sessionStorage.setItem("position", camera.position.toArray());
   sessionStorage.setItem("quaternion", camera.quaternion.toArray());
@@ -676,6 +935,15 @@ function loadConfiguration() {
     isShowGrid = isShowGrid === "true";
   }
   showGrid(isShowGrid);
+
+  let isShowGridLabels = sessionStorage.getItem("showGridLabels");
+  if (isShowGridLabels === null) {
+    isShowGridLabels = true;
+    sessionStorage.setItem("showGridLabels", isShowGridLabels.toString());
+  } else {
+    isShowGridLabels = isShowGridLabels === "true";
+  }
+  showGridLabels(isShowGridLabels);
 
   let previewBackground = sessionStorage.getItem("previewBackground");
   if (previewBackground === null) {
@@ -1186,12 +1454,14 @@ function updateRendererSize() {
   renderer.setSize(width, height, false);
   sizeAxisOverlayCanvas();
   sizeViewCubeCanvas();
+  layoutBottomOverlays();
   render();
 }
 
 // Expose functions
 window.showAxis = showAxis;
 window.showGrid = showGrid;
+window.showGridLabels = showGridLabels;
 window.setModelColor = setModelColor;
 window.setPreviewBackground = setPreviewBackground;
 window.saveConfiguration = saveConfiguration;

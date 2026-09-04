@@ -8,6 +8,16 @@
 
 - Preview corner axis orientation widget (OpenSCAD-style labeled X/Y/Z triad) that tracks camera rotation
 - Preview view cube (click a face for Front/Back/Left/Right/Top/Bottom) that tracks camera rotation
+- Preview grid uses 1-2-5-10 model-unit cells, is origin-centered, covers the model, and snaps extent so major lines stay aligned
+- Preview grid corner legend showing cell size in model units
+- Preview grid major-tick coordinate labels along the outer X and Y edges (occluded by the model when it covers them)
+- Preview toolbar **Toggle Grid Labels** (disabled while the grid is hidden)
+- Preview background dropdown includes the remaining OpenSCAD 3D-view schemes (Metallic, Sunset, Starnight, BeforeDawn, Nature, Daylight Gem, Nocturnal Gem, DeepOcean, Solarized, Tomorrow, Tomorrow Night) plus existing Clear Sky, Cornfield, and plugin Dark Gradient
+
+### Changed
+
+- Preview background menu is sorted alphabetically by name
+- Axis orientation widget and grid-scale legend sit above the OpenSCAD output console when the console is expanded
 
 ### Fixed
 

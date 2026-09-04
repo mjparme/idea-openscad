@@ -56,15 +56,15 @@ You can manually refresh the preview by clicking on the ![Refresh icon](/src/mai
 Alternatively, you can activate the auto refresh with the button ![Autorefresh icon](/src/main/resources/com/javampire/openscad/icons/autoRefresh.svg) which refresh the preview at every file save.
 If your model is complex you can temporarily lower the [$fn variable](https://en.wikibooks.org/wiki/OpenSCAD_User_Manual/Other_Language_Features#.24fa.2C_.24fs_and_.24fn) to speed up the preview generation.
 
-![Split preview editor with WASM 3D preview showing a bowl model on Clear Sky background](docs/screenshots/split-preview-semantic-highlighting.png)
+![Split preview editor with WASM 3D preview, dimension grid, axis widget, and OpenSCAD output console](docs/screenshots/split-preview-semantic-highlighting.png)
 
 When openscad-wasm prints output, `echo`, warnings, or errors, it appears in the **OpenSCAD output** panel at the bottom of the preview. Click the panel header to show or hide it; it auto-expands on warnings and errors.
 
-![Split preview with OpenSCAD output console showing ECHO output from a BOSL model](docs/screenshots/preview-console-output.png)
+![Split preview with Clear Sky background and OpenSCAD output console showing ECHO output](docs/screenshots/preview-console-output.png)
 
-Use the **Background** toolbar dropdown to choose a scene background. **Dark Gradient** (default), **Clear Sky**, and **Cornfield** use colors from the matching OpenSCAD render color schemes.
+Use the **Background** toolbar dropdown to choose a scene background. Schemes match OpenSCAD’s 3D-view color schemes (plus plugin **Dark Gradient**, the default).
 
-![Preview toolbar background dropdown with Clear Sky, Cornfield, and Dark Gradient options](docs/screenshots/preview-background-toolbar.png)
+![Preview toolbar background dropdown listing OpenSCAD 3D-view schemes alphabetically](docs/screenshots/preview-background-toolbar.png)
 
 ## Code completion
 

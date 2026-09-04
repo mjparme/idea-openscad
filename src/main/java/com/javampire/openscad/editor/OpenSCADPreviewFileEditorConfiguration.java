@@ -11,6 +11,7 @@ public class OpenSCADPreviewFileEditorConfiguration {
     private Boolean autoRefresh = true;
     private Boolean showAxis = true;
     private Boolean showGrid = true;
+    private Boolean showGridLabels = true;
     private PreviewBackground previewBackground = PreviewBackground.DARK_GRADIENT;
     private Color modelColor = JBColor.YELLOW;
     private String cameraQuaternion;
@@ -76,6 +77,26 @@ public class OpenSCADPreviewFileEditorConfiguration {
     public void toggleShowGrid() {
         showGrid = !showGrid;
         applyShowGrid();
+    }
+
+    public Boolean getShowGridLabels() {
+        return showGridLabels;
+    }
+
+    public void setShowGridLabels(final Boolean showGridLabels) {
+        this.showGridLabels = showGridLabels;
+    }
+
+    public void applyShowGridLabels() {
+        final CefBrowser browser = getBrowser();
+        if (browser != null) {
+            browser.executeJavaScript("showGridLabels(" + showGridLabels + ")", null, 0);
+        }
+    }
+
+    public void toggleShowGridLabels() {
+        showGridLabels = !showGridLabels;
+        applyShowGridLabels();
     }
 
     @NotNull

@@ -17,4 +17,6 @@ public class OpenSCADIcons {
     public static final Icon TOGGLE_AXIS_GRAYED = IconLoader.getIcon("/com/javampire/openscad/icons/axis_grayed.svg", OpenSCADIcons.class);
     public static final Icon TOGGLE_GRID = IconLoader.getIcon("/com/javampire/openscad/icons/grid.svg", OpenSCADIcons.class);
     public static final Icon TOGGLE_GRID_GRAYED = IconLoader.getIcon("/com/javampire/openscad/icons/grid_grayed.svg", OpenSCADIcons.class);
+    public static final Icon TOGGLE_GRID_LABELS = IconLoader.getIcon("/com/javampire/openscad/icons/gridLabels.svg", OpenSCADIcons.class);
+    public static final Icon TOGGLE_GRID_LABELS_GRAYED = IconLoader.getIcon("/com/javampire/openscad/icons/gridLabels_grayed.svg", OpenSCADIcons.class);
 }

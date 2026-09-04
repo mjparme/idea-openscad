@@ -285,6 +285,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
                         new ToggleAutoRefreshAction(),
                         new Separator(),
                         new ToggleGridAction(),
+                        new ToggleGridLabelsAction(),
                         new ToggleAxisAction(),
                         new PreviewBackgroundActionGroup(),
                         new SetModelColorAction(),
@@ -482,6 +483,7 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
         private final static String DELIMITER = "=";
         private final static String SHOW_AXIS = "showAxis";
         private final static String SHOW_GRID = "showGrid";
+        private final static String SHOW_GRID_LABELS = "showGridLabels";
         private final static String MODEL_COLOR = "modelColor";
         private final static String PREVIEW_BACKGROUND = "previewBackground";
         private final static String PREVIEW_STATUS = "previewStatus";
@@ -496,6 +498,8 @@ public class OpenSCADPreviewFileEditor extends UserDataHolderBase implements Fil
                 editorConfig.setShowAxis(Boolean.valueOf(parsed[1]));
             } else if (SHOW_GRID.equals(parsed[0])) {
                 editorConfig.setShowGrid(Boolean.valueOf(parsed[1]));
+            } else if (SHOW_GRID_LABELS.equals(parsed[0])) {
+                editorConfig.setShowGridLabels(Boolean.valueOf(parsed[1]));
             } else if (MODEL_COLOR.equals(parsed[0])) {
                 editorConfig.setModelColor(JBColor.decode(parsed[1]));
             } else if (PREVIEW_BACKGROUND.equals(parsed[0])) {

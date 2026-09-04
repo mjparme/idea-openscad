@@ -11,6 +11,9 @@ import com.javampire.openscad.editor.OpenSCADPreviewFileEditor;
 import com.javampire.openscad.editor.PreviewBackground;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
 /**
  * Toolbar dropdown for preview scene background.
  */
@@ -18,7 +21,9 @@ public class PreviewBackgroundActionGroup extends DefaultActionGroup implements 
 
     public PreviewBackgroundActionGroup() {
         super("Background", true);
-        for (final PreviewBackground background : PreviewBackground.values()) {
+        final PreviewBackground[] backgrounds = PreviewBackground.values();
+        Arrays.sort(backgrounds, Comparator.comparing(PreviewBackground::getDisplayName, String.CASE_INSENSITIVE_ORDER));
+        for (final PreviewBackground background : backgrounds) {
             add(new SetPreviewBackgroundAction(background));
         }
         getTemplatePresentation().setIcon(AllIcons.Actions.Colors);
