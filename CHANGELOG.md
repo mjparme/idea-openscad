@@ -8,6 +8,10 @@
 
 - Plugin Verifier also checks IntelliJ IDEA 2026.2.1 in addition to `recommended()` latest patches per major
 
+### Fixed
+
+- List-comprehension `let` bindings resolve when chained as sibling prefix clauses (e.g. `let(end = …) let(degreesPerPoint = …) for (…) let(angle = …)`)
+
 ## [1.4.0] - 2026-09-03
 
 ### Added

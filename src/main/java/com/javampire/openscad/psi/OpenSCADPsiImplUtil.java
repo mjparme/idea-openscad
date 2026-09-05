@@ -421,6 +421,8 @@ public class OpenSCADPsiImplUtil {
 
     private static void collectLetFullArgDeclarations(@NotNull final PsiElement element,
         @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        collectListComprehensionLetBindingsFromContainers(element, result);
+
         OpenSCADLetElement letElement = PsiTreeUtil.getParentOfType(element, OpenSCADLetElement.class);
         while (letElement != null) {
             collectLetScopeFullArgDeclarations(element, letElement.getFullArgDeclarationList(), result);
@@ -437,6 +439,43 @@ public class OpenSCADPsiImplUtil {
                 }
             }
             builtinExpr = PsiTreeUtil.getParentOfType(builtinExpr.getParent(), OpenSCADBuiltinExpr.class);
+        }
+    }
+
+    private static void collectListComprehensionLetBindingsFromContainers(@NotNull final PsiElement element,
+        @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        PsiElement container = element.getParent();
+        while (container != null && !(container instanceof PsiFileBase)) {
+            collectListComprehensionLetBindingsInContainer(container, element, result);
+            container = container.getParent();
+        }
+    }
+
+    private static void collectListComprehensionLetBindingsInContainer(@NotNull final PsiElement container,
+        @NotNull final PsiElement element,
+        @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        final List<OpenSCADLetElement> activeLetElements = new ArrayList<>();
+        for (PsiElement sibling = container.getFirstChild(); sibling != null; sibling = sibling.getNextSibling()) {
+            if (sibling instanceof OpenSCADLetElement letElement) {
+                if (element.equals(sibling) || PsiTreeUtil.isAncestor(sibling, element, false)) {
+                    addAllLetElementDeclarations(activeLetElements, result);
+                    collectLetScopeFullArgDeclarations(element, letElement.getFullArgDeclarationList(), result);
+                    return;
+                }
+                activeLetElements.add(letElement);
+                continue;
+            }
+            if (element.equals(sibling) || PsiTreeUtil.isAncestor(sibling, element, false)) {
+                addAllLetElementDeclarations(activeLetElements, result);
+                return;
+            }
+        }
+    }
+
+    private static void addAllLetElementDeclarations(@NotNull final List<OpenSCADLetElement> letElements,
+        @NotNull final List<OpenSCADFullArgDeclaration> result) {
+        for (final OpenSCADLetElement letElement : letElements) {
+            addAllFullArgDeclarations(letElement.getFullArgDeclarationList(), result);
         }
     }
 

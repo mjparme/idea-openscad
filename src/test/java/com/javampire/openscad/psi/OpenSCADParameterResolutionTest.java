@@ -193,4 +193,56 @@ public class OpenSCADParameterResolutionTest extends BasePlatformTestCase {
                 .orElseThrow();
         assertTrue(aInLet.getReference().resolve() instanceof OpenSCADForBinding);
     }
+
+    public void testListComprehensionLetBindingsVisibleToLaterClauses() {
+        myFixture.configureByText("test.scad", """
+                function getCirclePoints(radius = 10, numOfPoints = 16, degreesOfRotation = 360, direction = "cw",
+                    calculateLastPoint = false, startAngle = 0) = [
+                    let(end = calculateLastPoint ? 0 : 1)
+                    let(degreesPerPoint = degreesOfRotation / numOfPoints)
+                    for (point = [0 : numOfPoints - end])
+                        let(angle = startAngle + degreesPerPoint * (direction == "cw" ? point : -point))
+                        circlePoint(radius, angle)
+                ];
+                function circlePoint(radius, angle) = [radius * sin(angle), radius * cos(angle)];
+                """);
+        final List<OpenSCADVariableRefExpr> refs = new ArrayList<>(
+                PsiTreeUtil.findChildrenOfType(myFixture.getFile(), OpenSCADVariableRefExpr.class));
+        final OpenSCADVariableRefExpr endRef = refs.stream().filter(r -> "end".equals(r.getName())).findFirst().orElseThrow();
+        final OpenSCADVariableRefExpr degreesPerPointRef = refs.stream()
+                .filter(r -> "degreesPerPoint".equals(r.getName()))
+                .findFirst()
+                .orElseThrow();
+        final OpenSCADVariableRefExpr pointRef = refs.stream()
+                .filter(r -> "point".equals(r.getName()))
+                .findFirst()
+                .orElseThrow();
+        final OpenSCADVariableRefExpr angleInComprehension = refs.stream()
+                .filter(r -> "angle".equals(r.getName()))
+                .filter(r -> PsiTreeUtil.getParentOfType(r, OpenSCADVectorExpr.class) != null)
+                .findFirst()
+                .orElseThrow();
+        assertTrue(endRef.getReference().resolve() instanceof OpenSCADFullArgDeclaration);
+        assertTrue(degreesPerPointRef.getReference().resolve() instanceof OpenSCADFullArgDeclaration);
+        assertTrue(pointRef.getReference().resolve() instanceof OpenSCADForBinding);
+        assertTrue(angleInComprehension.getReference().resolve() instanceof OpenSCADFullArgDeclaration);
+    }
+
+    public void testListComprehensionLetBindingsDoNotProduceUnresolvedInspection() {
+        myFixture.enableInspections(OpenSCADUnresolvedReferenceInspection.class);
+        myFixture.configureByText("test.scad", """
+                function getCirclePoints(radius = 10, numOfPoints = 16, degreesOfRotation = 360, direction = "cw",
+                    calculateLastPoint = false, startAngle = 0) = [
+                    let(end = calculateLastPoint ? 0 : 1)
+                    let(degreesPerPoint = degreesOfRotation / numOfPoints)
+                    for (point = [0 : numOfPoints - end])
+                        let(angle = startAngle + degreesPerPoint * (direction == "cw" ? point : -point))
+                        circlePoint(radius, angle)
+                ];
+                function circlePoint(radius, angle) = [radius * sin(angle), radius * cos(angle)];
+                """);
+        assertFalse(myFixture.doHighlighting().stream()
+                .filter(info -> info.getSeverity() == HighlightSeverity.ERROR)
+                .anyMatch(info -> info.getDescription() != null && info.getDescription().contains("Cannot resolve")));
+    }
 }
