@@ -8,6 +8,8 @@
 
 - Plugin Verifier also checks IntelliJ IDEA 2026.2.1 in addition to `recommended()` latest patches per major
 
+## [1.4.1] - 2026-09-05
+
 ### Fixed
 
 - List-comprehension `let` bindings resolve when chained as sibling prefix clauses (e.g. `let(end = …) let(degreesPerPoint = …) for (…) let(angle = …)`)
@@ -138,7 +140,8 @@ Initial maintained fork release as `com.mjparme.idea-openscad` (replacing the un
 - Stub index crash when a declaration name is null
 - Plugin Verifier failures by removing internal API usages
 
-[Unreleased]: https://github.com/mjparme/idea-openscad/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/mjparme/idea-openscad/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/mjparme/idea-openscad/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/mjparme/idea-openscad/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/mjparme/idea-openscad/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/mjparme/idea-openscad/compare/v1.1.0...v1.2.1
