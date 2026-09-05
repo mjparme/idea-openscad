@@ -4,11 +4,11 @@
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-05
+
 ### Changed
 
 - Plugin Verifier also checks IntelliJ IDEA 2026.2.1 in addition to `recommended()` latest patches per major
-
-## [1.4.1] - 2026-09-05
 
 ### Fixed
 
